@@ -1,0 +1,35 @@
+{
+  "name": "kpsec-action-planner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src e2e scripts playwright.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --conditions=react-server --import tsx --test src/lib/*.test.ts",
+    "test:e2e": "playwright test",
+    "smoke:live": "tsx scripts/live-smoke.ts",
+    "smoke:adversarial-live": "tsx scripts/adversarial-live-smoke.ts"
+  },
+  "dependencies": {
+    "next": "16.2.10",
+    "openai": "6.48.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "recharts": "^3.9.2",
+    "server-only": "0.0.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.2.10",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3"
+  }
+}
