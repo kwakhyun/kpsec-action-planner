@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type { AgentDecisionExplanation } from "./decision-contracts";
+import { runOfflineDecisionDemo } from "./decision-demo";
+import {
+  DecisionExplanationGuardError,
+  validateDecisionExplanation,
+} from "./generate-decision-explanation";
+
+const envelope = runOfflineDecisionDemo("BASELINE");
+if (!envelope.decision) {
+  throw new Error("TEST_FIXTURE_MISSING_DECISION");
+}
+const DECISION = envelope.decision;
+
+const VALID_EXPLANATION: AgentDecisionExplanation = {
+  understoodConcern:
+    "기회를 놓치는 걱정이 한 시점의 가격 부담보다 더 큰 고민으로 이해했습니다.",
+  oneShotBenefit: "남은 수량을 계속 신경 써야 하는 부담을 줄일 수 있습니다.",
+  oneShotRisk: "전체 수량이 같은 확인 시점의 가격에 영향을 받습니다.",
+  stagedBenefit: "한 가격에 몰리는 부담을 여러 확인 시점으로 나눌 수 있습니다.",
+  stagedRisk: "다음 확인 전에 상황이 바뀌면 계획한 수량이 남을 수 있습니다.",
+  priorityPlanId: DECISION.preferredPlanId,
+  priorityReason:
+    "기회를 놓치는 후회를 더 크게 답했으므로 일괄안을 먼저 비교 대상으로 살펴봅니다.",
+  nextQuestionKey: "NONE",
+};
+
+function assertGuardRejects(candidate: unknown): void {
+  assert.throws(
+    () => validateDecisionExplanation(candidate, DECISION),
+    (error: unknown) => error instanceof DecisionExplanationGuardError,
+  );
+}
+
+test("semantic validation accepts plain language tied to the core-owned preferred plan", () => {
+  assert.deepEqual(
+    validateDecisionExplanation(VALID_EXPLANATION, DECISION),
+    VALID_EXPLANATION,
+  );
+});
+
+test("semantic validation rejects unknown and mismatched plan IDs", () => {
+  assertGuardRejects({
+    ...VALID_EXPLANATION,
+    priorityPlanId: "UNKNOWN_PLAN",
+  });
+
+  const mismatchedPlanId = DECISION.plans.find(
+    (plan) => plan.id !== DECISION.preferredPlanId,
+  )?.id;
+  assert.ok(mismatchedPlanId);
+  assertGuardRejects({
+    ...VALID_EXPLANATION,
+    priorityPlanId: mismatchedPlanId,
+  });
+});
+
+test("semantic validation rejects any Arabic digit in generated prose", () => {
+  assertGuardRejects({
+    ...VALID_EXPLANATION,
+    stagedBenefit: "3회로 나누면 한 가격에 몰리는 부담을 줄일 수 있습니다.",
+  });
+});
+
+test("semantic validation rejects price predictions and guarantees", () => {
+  assertGuardRejects({
+    ...VALID_EXPLANATION,
+    priorityReason: "이 종목은 반드시 오를 것이므로 일괄안을 선택합니다.",
+  });
+  assertGuardRejects({
+    ...VALID_EXPLANATION,
+    priorityReason: "원금 보장이 되므로 안심하고 진행할 수 있습니다.",
+  });
+});
