@@ -33,10 +33,27 @@ let clientCache:
 export class DecisionExplanationGuardError extends Error {
   readonly code = "SEMANTIC_GUARD" as const;
   readonly requestedModel: string | null;
+  readonly reason:
+    | "SCHEMA_INVALID"
+    | "UNKNOWN_PLAN"
+    | "PREFERRED_PLAN_MISMATCH"
+    | "UNOWNED_NUMBER"
+    | "INTERNAL_TOKEN"
+    | "FORBIDDEN_CLAIM";
 
-  constructor(requestedModel?: string) {
+  constructor(
+    reason:
+      | "SCHEMA_INVALID"
+      | "UNKNOWN_PLAN"
+      | "PREFERRED_PLAN_MISMATCH"
+      | "UNOWNED_NUMBER"
+      | "INTERNAL_TOKEN"
+      | "FORBIDDEN_CLAIM" = "SCHEMA_INVALID",
+    requestedModel?: string,
+  ) {
     super("SEMANTIC_GUARD");
     this.name = "DecisionExplanationGuardError";
+    this.reason = reason;
     this.requestedModel = requestedModel ?? null;
   }
 }
@@ -89,7 +106,9 @@ export function validateDecisionExplanation(
   decision: ExecutionCoreSuccess,
 ): AgentDecisionExplanation {
   const parsed = AgentDecisionExplanationSchema.safeParse(candidate);
-  if (!parsed.success) throw new DecisionExplanationGuardError();
+  if (!parsed.success) {
+    throw new DecisionExplanationGuardError("SCHEMA_INVALID");
+  }
 
   const text = explanationText(parsed.data);
   const planIds = new Set(decision.plans.map((plan) => plan.id));
@@ -103,14 +122,20 @@ export function validateDecisionExplanation(
       text,
     );
 
-  if (
-    !planIds.has(parsed.data.priorityPlanId) ||
-    parsed.data.priorityPlanId !== decision.preferredPlanId ||
-    hasUnownedNumber ||
-    hasInternalToken ||
-    hasForbiddenClaim
-  ) {
-    throw new DecisionExplanationGuardError();
+  if (!planIds.has(parsed.data.priorityPlanId)) {
+    throw new DecisionExplanationGuardError("UNKNOWN_PLAN");
+  }
+  if (parsed.data.priorityPlanId !== decision.preferredPlanId) {
+    throw new DecisionExplanationGuardError("PREFERRED_PLAN_MISMATCH");
+  }
+  if (hasUnownedNumber) {
+    throw new DecisionExplanationGuardError("UNOWNED_NUMBER");
+  }
+  if (hasInternalToken) {
+    throw new DecisionExplanationGuardError("INTERNAL_TOKEN");
+  }
+  if (hasForbiddenClaim) {
+    throw new DecisionExplanationGuardError("FORBIDDEN_CLAIM");
   }
 
   return parsed.data;
@@ -207,7 +232,11 @@ export async function generateDecisionExplanation(options: {
     };
   } catch (error: unknown) {
     if (error instanceof DecisionExplanationGuardError) {
-      throw new DecisionExplanationGuardError(response.model);
+      console.warn("[decision-explanation] semantic guard rejected output", {
+        reason: error.reason,
+        model: response.model,
+      });
+      throw new DecisionExplanationGuardError(error.reason, response.model);
     }
     const normalized = normalizeRequestError(error, response.model);
     throw new PlanGenerationError(normalized.code, {

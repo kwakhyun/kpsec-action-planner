@@ -7,6 +7,7 @@ import {
   DecisionExplanationGuardError,
   validateDecisionExplanation,
 } from "./generate-decision-explanation";
+import { DECISION_EXPLANATION_SYSTEM_PROMPT } from "./decision-prompt";
 
 const envelope = runOfflineDecisionDemo("BASELINE");
 if (!envelope.decision) {
@@ -38,6 +39,21 @@ test("semantic validation accepts plain language tied to the core-owned preferre
   assert.deepEqual(
     validateDecisionExplanation(VALID_EXPLANATION, DECISION),
     VALID_EXPLANATION,
+  );
+});
+
+test("prompt copies the core-owned preferred plan instead of asking AI to re-decide it", () => {
+  assert.match(
+    DECISION_EXPLANATION_SYSTEM_PROMPT,
+    /priorityPlanId에는 verifiedMarketAndPlans\.preferredPlanId 값을 그대로 복사/,
+  );
+  assert.match(
+    DECISION_EXPLANATION_SYSTEM_PROMPT,
+    /AI는 이 결정을 재해석하거나 뒤집지 않고/,
+  );
+  assert.doesNotMatch(
+    DECISION_EXPLANATION_SYSTEM_PROMPT,
+    /감당 범위보다 최근 고저 변동이 크거나.*분할안을 우선/,
   );
 });
 

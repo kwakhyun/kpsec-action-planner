@@ -80,7 +80,7 @@ const KNOWN_SUBJECTS: Record<string, string> = {
 type ConcernMode = "PRE_BUY" | "HOLDING_ANXIETY" | "SELL_TIMING";
 
 const INITIAL_POSITION_DRAFT: PositionCoachDraft = {
-  averageCostKrw: "70000",
+  averageCostKrw: "300000",
   holdingQuantity: "100",
   horizon: "WEEKS",
   deadline: "THIS_WEEK",
