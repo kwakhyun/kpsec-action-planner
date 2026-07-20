@@ -174,7 +174,7 @@ function AdversarialReviewSession({
     try {
       await onCoreRecalculate({ questionKey, answerKey });
       setMessage(
-        "답변을 결정 코어에 전달했습니다. 새 실행안은 AI가 아니라 결정 코어가 다시 계산합니다.",
+        "답변을 계획 계산기에 전달했습니다. 새 실행안은 AI가 아니라 계획 계산기가 다시 계산합니다.",
       );
     } catch {
       setMessage(
@@ -193,6 +193,19 @@ function AdversarialReviewSession({
     <section className={className} aria-labelledby="adversarial-review-title">
       <div className="challenge-card">
         <div>
+          <div className="challenge-ai-identity">
+            <span className="challenge-ai-badge" aria-hidden="true">AI</span>
+            <span>
+              <strong>AI 다른 관점</strong>
+              <small>
+                {loadState === "LOADING"
+                  ? "검증된 사실을 읽는 중"
+                  : loadState === "SUCCESS"
+                    ? "검토 완료"
+                    : "사실 범위 안에서만 질문"}
+              </small>
+            </span>
+          </div>
           <p className="challenge-eyebrow">한 번 더 생각해 보기</p>
           <h3 id="adversarial-review-title">
             이 계획의 반대 의견도 들어볼까요?
@@ -205,12 +218,19 @@ function AdversarialReviewSession({
 
         <button
           type="button"
-          className="challenge-cta"
+          className="challenge-cta btn btn--primary"
           onClick={requestReview}
           disabled={!request || disabled || loadState === "LOADING"}
         >
           {loadState === "LOADING" ? "반대 의견을 확인하고 있어요…" : "이 계획의 반대 의견도 들어볼까요?"}
         </button>
+
+        {loadState === "LOADING" ? (
+          <div className="challenge-thinking" role="status">
+            <span aria-hidden="true">AI</span>
+            <p>시장 정보와 내 조건에서 놓친 가정을 확인하고 있어요.</p>
+          </div>
+        ) : null}
 
         <div aria-live="polite" aria-atomic="true">
           {loadState === "FAILURE" && message ? (
@@ -249,6 +269,7 @@ function AdversarialReviewSession({
                   {QUICK_ANSWERS[result.questionKey].map((answer) => (
                     <button
                       type="button"
+                      className="chip"
                       key={answer.key}
                       onClick={() => chooseAnswer(result.questionKey, answer.key)}
                       disabled={answering}
@@ -270,21 +291,108 @@ function AdversarialReviewSession({
       </div>
 
       <style jsx>{`
+        /* Migrated from a fully isolated palette to the shared tokens in
+           globals.css (see Stage 5 of the UI/UX consolidation). .challenge-cta
+           no longer sets its own background/color: .btn--primary (globals.css)
+           supplies the shared warm-yellow primary action so this CTA matches
+           the rest of the securities demo without introducing another color. */
         .challenge-card {
           display: grid;
           gap: 16px;
           padding: 20px;
-          border: 1px solid #e6e7eb;
-          border-radius: 20px;
-          background: #ffffff;
-          color: #17191f;
-          box-shadow: 0 8px 24px rgba(23, 25, 31, 0.06);
+          border: 1px solid var(--line);
+          border-radius: var(--radius-lg);
+          background: var(--surface);
+          color: var(--text-primary);
+          box-shadow: var(--shadow);
+        }
+
+        .challenge-ai-identity {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+
+        .challenge-ai-badge {
+          display: grid;
+          width: 36px;
+          height: 36px;
+          place-items: center;
+          border: 1px solid var(--amber-strong);
+          border-radius: 12px;
+          background: var(--amber);
+          color: var(--gold-label-strong);
+          font-size: 0.76rem;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          box-shadow: 0 7px 18px rgba(178, 139, 0, 0.16);
+        }
+
+        .challenge-ai-identity > span:last-child {
+          display: grid;
+          gap: 2px;
+        }
+
+        .challenge-ai-identity strong {
+          color: var(--text-primary);
+          font-size: 0.86rem;
+        }
+
+        .challenge-ai-identity small {
+          color: var(--text-faint);
+          font-size: 0.7rem;
+        }
+
+        .challenge-thinking {
+          position: relative;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 10px;
+          align-items: center;
+          overflow: hidden;
+          border: 1px solid #ead371;
+          border-radius: 13px;
+          padding: 12px;
+          background: #fffbdf;
+        }
+
+        .challenge-thinking::after {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          height: 3px;
+          background: linear-gradient(90deg, transparent, #e0b800, transparent);
+          content: "";
+          animation: challenge-scan 1.4s ease-in-out infinite;
+        }
+
+        .challenge-thinking > span {
+          color: var(--gold-label-strong);
+          font-size: 0.74rem;
+          font-weight: 900;
+        }
+
+        .challenge-thinking p {
+          color: #5e5638;
+          font-size: 0.78rem;
+          line-height: 1.45;
+        }
+
+        @keyframes challenge-scan {
+          0% { transform: translateX(-65%); }
+          100% { transform: translateX(65%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .challenge-thinking::after { animation: none; }
         }
 
         .challenge-eyebrow,
         .challenge-section-label {
           margin: 0 0 6px;
-          color: #6b5a00;
+          color: var(--gold-label);
           font-size: 0.78rem;
           font-weight: 800;
           letter-spacing: 0.02em;
@@ -302,18 +410,15 @@ function AdversarialReviewSession({
 
         .challenge-intro {
           margin-top: 8px;
-          color: #626773;
+          color: var(--text-muted);
           font-size: 0.9rem;
           line-height: 1.55;
         }
 
         .challenge-cta {
           min-height: 46px;
-          border: 0;
           border-radius: 14px;
           padding: 0 16px;
-          background: #ffe100;
-          color: #191600;
           font: inherit;
           font-weight: 800;
           cursor: pointer;
@@ -346,20 +451,20 @@ function AdversarialReviewSession({
         .challenge-list small {
           display: block;
           margin-top: 4px;
-          color: #707581;
+          color: var(--text-faint);
         }
 
         .challenge-assumption,
         .challenge-question {
           padding: 14px;
           border-radius: 14px;
-          background: #f7f7f8;
+          background: var(--surface-raised);
           line-height: 1.5;
         }
 
         .challenge-question > p:not(.challenge-section-label) {
           margin-top: 6px;
-          color: #626773;
+          color: var(--text-muted);
           font-size: 0.88rem;
         }
 
@@ -372,11 +477,8 @@ function AdversarialReviewSession({
 
         .challenge-answers button {
           min-height: 40px;
-          border: 1px solid #d7d9df;
           border-radius: 999px;
           padding: 8px 13px;
-          background: #ffffff;
-          color: #252832;
           font: inherit;
           font-size: 0.85rem;
           font-weight: 700;
@@ -387,8 +489,8 @@ function AdversarialReviewSession({
           margin-top: 14px;
           padding: 12px 14px;
           border-radius: 12px;
-          background: #fff8cc;
-          color: #574b00;
+          background: var(--amber-soft);
+          color: var(--gold-label-strong);
           font-size: 0.88rem;
           line-height: 1.5;
         }
@@ -396,8 +498,8 @@ function AdversarialReviewSession({
         .challenge-message--error {
           display: grid;
           gap: 3px;
-          background: #fff1f0;
-          color: #9c2b20;
+          background: var(--danger-soft);
+          color: var(--danger);
         }
 
         @media (max-width: 640px) {

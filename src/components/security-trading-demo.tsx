@@ -45,6 +45,10 @@ import {
   type IntradayMarketView,
 } from "@/lib/intraday-market";
 import {
+  ChartHistoryEnvelopeSchema,
+  type ChartHistoryView,
+} from "@/lib/chart-history";
+import {
   MarketViewEnvelopeSchema,
   type MarketView,
 } from "@/lib/market-view";
@@ -90,7 +94,7 @@ function chartInterval(
   period: CandlestickPeriod,
   intraday: IntradayMarketView | null,
 ): "ONE_MINUTE" | "FIVE_MINUTES" | "DAILY" {
-  if (period !== "1D" || !intraday) return "DAILY";
+  if (period !== "MINUTE" || !intraday) return "DAILY";
   return intraday.provenance.interval === "1m" ? "ONE_MINUTE" : "FIVE_MINUTES";
 }
 
@@ -122,6 +126,18 @@ function formatDateTime(value: string): string {
   });
 }
 
+function exchangeLabel(exchange: string | null): string {
+  if (exchange === "KSC" || exchange === "KRX") return "한국거래소";
+  return exchange ?? "거래소 확인 불가";
+}
+
+function beginnerDelayNotice(notice: string): string {
+  return notice.replace(
+    "실시간 호가가 아닙니다.",
+    "지금 주문 가능한 가격을 보여주는 데이터가 아닙니다.",
+  );
+}
+
 function sameInput(
   left: DecisionConversationInput | null,
   right: DecisionConversationInput,
@@ -146,6 +162,7 @@ export function SecurityTradingDemo() {
   const marketRequestIdRef = useRef(0);
   const marketAbortRef = useRef<AbortController | null>(null);
   const intradayAbortRef = useRef<AbortController | null>(null);
+  const historyAbortRef = useRef<AbortController | null>(null);
   const aiRequestIdRef = useRef(0);
   const aiAbortRef = useRef<AbortController | null>(null);
   const [searchValue, setSearchValue] = useState(INITIAL_INPUT.symbol);
@@ -155,7 +172,9 @@ export function SecurityTradingDemo() {
   const [marketError, setMarketError] = useState<string | null>(null);
   const [intraday, setIntraday] = useState<IntradayMarketView | null>(null);
   const [intradayError, setIntradayError] = useState<string | null>(null);
-  const [chartPeriod, setChartPeriod] = useState<CandlestickPeriod>("3M");
+  const [history, setHistory] = useState<ChartHistoryView | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [chartPeriod, setChartPeriod] = useState<CandlestickPeriod>("DAY");
   const [concern, setConcern] = useState<ConcernMode | null>(null);
   const [positionDraft, setPositionDraft] = useState<PositionCoachDraft>(
     INITIAL_POSITION_DRAFT,
@@ -232,7 +251,7 @@ export function SecurityTradingDemo() {
             orderStylePreference,
             positionCoach?.reviewLines.loss
               ? {
-                  label: "내가 정한 손실 재확인선",
+                  label: "내가 다시 확인할 손실 가격",
                   priceKrw: positionCoach.reviewLines.loss.reviewPriceKrw,
                   meaning: positionCoach.reviewLines.loss.meaning,
                 }
@@ -334,21 +353,21 @@ export function SecurityTradingDemo() {
         },
         {
           id: "MARKET_VOLATILITY_20D",
-          label: "최근 변동성",
-          observation: `최근 변동성 계산값은 ${market.metrics.volatility20dPct.toFixed(1)}%입니다.`,
-          sourceLabel: "Yahoo Finance 일봉에서 서버 계산",
+          label: "최근 20일 가격 흔들림 참고값",
+          observation: `최근 20일 가격 흔들림 참고값은 ${market.metrics.volatility20dPct.toFixed(1)}%입니다.`,
+          sourceLabel: "Yahoo Finance 하루 단위 데이터에서 서버 계산",
         },
         {
           id: "MARKET_RANGE_20D",
-          label: "최근 고저 범위",
+          label: "최근 20일 가격 범위",
           observation: `${formatKrw(market.metrics.range20d.low)}부터 ${formatKrw(market.metrics.range20d.high)}까지 관찰됐습니다.`,
-          sourceLabel: "Yahoo Finance 일봉에서 서버 계산",
+          sourceLabel: "Yahoo Finance 하루 단위 데이터에서 서버 계산",
         },
         {
           id: "MARKET_RELATIVE_VOLUME_20D",
-          label: "평균 대비 거래량",
+          label: "평소 대비 최근 거래량",
           observation: `최근 거래량은 이전 평균의 ${market.metrics.relativeVolume20d?.toFixed(2) ?? "확인 불가"}배입니다.`,
-          sourceLabel: "Yahoo Finance 일봉에서 서버 계산",
+          sourceLabel: "Yahoo Finance 하루 단위 데이터에서 서버 계산",
         },
       ],
       currentPlan: {
@@ -357,19 +376,19 @@ export function SecurityTradingDemo() {
         preferredExplanation:
           selectedPlan.id === presentedDecision.preferredPlanId
             ? presentedDecision.preferredExplanation
-            : "사용자가 비교를 위해 이 실행안을 직접 선택했습니다. 수량과 조건은 결정 코어가 계산한 값입니다.",
+            : "사용자가 비교를 위해 이 실행안을 직접 선택했습니다. 수량과 조건은 계획 계산기가 계산한 값입니다.",
       },
       dataContext: {
         asOf: market.provenance.asOf,
         fetchedAt: market.provenance.fetchedAt,
         limitations: [
           market.provenance.delayNotice,
-          "실시간 호가와 주문 잔량은 확인하지 않았습니다.",
+          "지금 시장의 주문 가격과 대기 물량은 확인하지 않았습니다.",
           "과거 공개 데이터로 미래 가격이나 수익을 예측하지 않습니다.",
         ],
       },
       missingInformation: [
-        "실시간 호가와 체결 가능성",
+        "지금 시장의 주문 가격과 거래 완료 가능성",
         "사용자의 전체 자산과 다른 보유 종목",
       ],
       allowedQuestionKeys:
@@ -455,15 +474,59 @@ export function SecurityTradingDemo() {
     [],
   );
 
+  const loadHistory = useCallback(
+    async (symbol: string, parentRequestId: number) => {
+      historyAbortRef.current?.abort();
+      const controller = new AbortController();
+      historyAbortRef.current = controller;
+      setHistory(null);
+      setHistoryError(null);
+
+      try {
+        const response = await fetch(
+          `/api/market/history?symbol=${encodeURIComponent(symbol)}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const payload: unknown = await response.json();
+        const parsed = ChartHistoryEnvelopeSchema.safeParse(payload);
+        if (!parsed.success) {
+          throw new Error("장기 차트 데이터 응답을 확인할 수 없습니다.");
+        }
+        if (marketRequestIdRef.current !== parentRequestId) return;
+        if (parsed.data.status === "FAILURE") {
+          setHistoryError(parsed.data.error.message);
+          return;
+        }
+        setHistory(parsed.data.data);
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (marketRequestIdRef.current !== parentRequestId) return;
+        setHistoryError(
+          error instanceof Error && error.message
+            ? error.message
+            : "주·월·년 단위 장기 공개 데이터를 확인하지 못했습니다.",
+        );
+      } finally {
+        if (historyAbortRef.current === controller) {
+          historyAbortRef.current = null;
+        }
+      }
+    },
+    [],
+  );
+
   const loadMarket = useCallback(async (symbol: string) => {
     const normalizedSymbol = symbol.trim().toUpperCase();
     if (!normalizedSymbol) {
       marketRequestIdRef.current += 1;
       marketAbortRef.current?.abort();
       intradayAbortRef.current?.abort();
+      historyAbortRef.current?.abort();
       setMarket(null);
       setIntraday(null);
       setIntradayError(null);
+      setHistory(null);
+      setHistoryError(null);
       setPlanVisible(false);
       setAgentOpen(false);
       setOrderOpen(false);
@@ -487,7 +550,10 @@ export function SecurityTradingDemo() {
     intradayAbortRef.current?.abort();
     setIntraday(null);
     setIntradayError(null);
-    setChartPeriod("3M");
+    historyAbortRef.current?.abort();
+    setHistory(null);
+    setHistoryError(null);
+    setChartPeriod("DAY");
     setConcern(null);
     setPositionCoach(null);
     setChallengeChangeSummary(null);
@@ -521,6 +587,7 @@ export function SecurityTradingDemo() {
         symbol: nextMarket.symbol,
       }));
       void loadIntraday(nextMarket.symbol, requestId);
+      void loadHistory(nextMarket.symbol, requestId);
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       if (marketRequestIdRef.current !== requestId) return;
@@ -535,7 +602,7 @@ export function SecurityTradingDemo() {
         marketAbortRef.current = null;
       }
     }
-  }, [loadIntraday]);
+  }, [loadHistory, loadIntraday]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -545,6 +612,7 @@ export function SecurityTradingDemo() {
       window.clearTimeout(timerId);
       marketAbortRef.current?.abort();
       intradayAbortRef.current?.abort();
+      historyAbortRef.current?.abort();
       aiAbortRef.current?.abort();
     };
   }, [loadMarket]);
@@ -702,10 +770,11 @@ export function SecurityTradingDemo() {
 
   function handleTimeAxisAction(action: PositionCoachTimeAxisAction) {
     if (action === "WIDEN_TO_DAILY") {
-      selectChartPeriod("1M");
+      selectChartPeriod("DAY");
       return;
     }
     if (action === "REVIEW_ORIGINAL_PLAN") {
+      setTimeAxisDismissed(true);
       planSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -716,7 +785,7 @@ export function SecurityTradingDemo() {
     if (!market || !coreDecision || !concern) return;
     let nextInput: DecisionConversationInput = { ...input };
     let nextDraft: PositionCoachDraft = { ...positionDraft };
-    let summary = "답변을 반영해 같은 결정 코어로 실행안을 다시 계산했습니다.";
+    let summary = "답변을 반영해 같은 계획 계산기로 실행안을 다시 계산했습니다.";
 
     if (answer.questionKey === "CONFIRM_REGRET_PRIORITY") {
       const regret =
@@ -750,7 +819,7 @@ export function SecurityTradingDemo() {
         ...nextDraft,
         maxLossPercent: String(nextInput.maxAdverseMovePct),
       };
-      summary = "감당 가능한 손실 범위로 재확인선과 분할 비중을 다시 계산했습니다.";
+      summary = "감당 가능한 손실 범위로 다시 확인할 가격과 나누는 비중을 다시 계산했습니다.";
     } else if (answer.questionKey === "CONFIRM_ORDER_PRIORITY") {
       if (["FAST_EXECUTION", "PRICE_CONTROL", "UNSURE"].includes(answer.answerKey)) {
         const preference = answer.answerKey as PositionCoachDraft["orderStylePreference"];
@@ -788,7 +857,7 @@ export function SecurityTradingDemo() {
       };
     }
     const nextDecision = buildExecutionFromMarket(nextInput, market);
-    if (!nextDecision) throw new Error("결정 코어가 새 입력을 계산하지 못했습니다.");
+    if (!nextDecision) throw new Error("계획 계산기가 새 입력을 계산하지 못했습니다.");
     setPreviousRegret(input.regretPriority);
     setPreviousPreferredPlanId(coreDecision.preferredPlanId);
     setInput(nextInput);
@@ -835,7 +904,7 @@ export function SecurityTradingDemo() {
       current.includes(step) ? current : [...current, step].sort(),
     );
 
-    if (step < 4) {
+    if (step < 5) {
       setStep((step + 1) as GuidedTradeStep);
       return;
     }
@@ -968,7 +1037,7 @@ export function SecurityTradingDemo() {
               price:
                 positionCoach?.reviewLines.loss?.reviewPriceKrw ??
                 selectedPlan.reviewLine.lossTolerancePriceKrw,
-              label: positionCoach ? "내 손실 재확인선" : "손실 감당 기준",
+              label: positionCoach ? "내가 다시 확인할 손실 가격" : "손실 감당 기준",
               tone: "warning" as const,
             },
           ],
@@ -1042,7 +1111,7 @@ export function SecurityTradingDemo() {
                   <div>
                     <span>국내주식 · 공개 데이터 기준</span>
                     <h1>{input.subjectLabel}</h1>
-                    <p>{market.symbol} · {market.provenance.exchange ?? "거래소 확인 불가"}</p>
+                    <p>{market.symbol} · {exchangeLabel(market.provenance.exchange)}</p>
                   </div>
                   <span className="data-freshness-badge">최근 완료 거래일</span>
                 </header>
@@ -1058,9 +1127,9 @@ export function SecurityTradingDemo() {
 
                 <dl className="security-quote-card__metrics">
                   <div><dt>거래량</dt><dd>{formatVolume(market.quote.volume)}</dd></div>
-                  <div><dt>최근 고저</dt><dd>{formatKrw(market.metrics.range20d.low)} – {formatKrw(market.metrics.range20d.high)}</dd></div>
-                  <div><dt>최근 변동성</dt><dd>{market.metrics.volatility20dPct.toFixed(1)}%</dd></div>
-                  <div><dt>평균 대비 거래량</dt><dd>{market.metrics.relativeVolume20d?.toFixed(2) ?? "–"}배</dd></div>
+                  <div><dt>최근 20일 가격 범위</dt><dd>{formatKrw(market.metrics.range20d.low)} – {formatKrw(market.metrics.range20d.high)}</dd></div>
+                  <div><dt>가격 흔들림 참고값</dt><dd>{market.metrics.volatility20dPct.toFixed(1)}%</dd></div>
+                  <div><dt>평소 대비 최근 거래량</dt><dd>{market.metrics.relativeVolume20d?.toFixed(2) ?? "–"}배</dd></div>
                 </dl>
 
                 <div className="security-chart-card">
@@ -1068,6 +1137,8 @@ export function SecurityTradingDemo() {
                     dailyBars={market.bars}
                     intraday={intraday}
                     intradayUnavailableReason={intradayError}
+                    history={history}
+                    historyUnavailableReason={historyError}
                     currency={market.provenance.currency}
                     exchangeTimezone={market.provenance.exchangeTimezone}
                     period={chartPeriod}
@@ -1079,7 +1150,7 @@ export function SecurityTradingDemo() {
                     }
                     observation={market.observations ?? null}
                     planOverlay={chartOverlay}
-                    defaultPeriod="3M"
+                    defaultPeriod="DAY"
                   />
                   {planVisible && selectedPlan ? (
                     <div className="chart-plan-steps" aria-label="선택한 계획의 회차별 수량">
@@ -1096,9 +1167,9 @@ export function SecurityTradingDemo() {
                 <div className="market-source-row">
                   <div>
                     <strong>Yahoo Finance</strong>
-                    <span>{market.provenance.range} · {market.provenance.interval} · {market.provenance.tradingSessionCount}개 거래일</span>
+                    <span>최근 3개월 · 하루 간격 · {market.provenance.tradingSessionCount}개 거래일</span>
                   </div>
-                  <p>{market.provenance.delayNotice}</p>
+                  <p>{beginnerDelayNotice(market.provenance.delayNotice)}</p>
                   <a href={market.provenance.sourceUrl} target="_blank" rel="noreferrer">원본 출처</a>
                 </div>
 
@@ -1138,7 +1209,7 @@ export function SecurityTradingDemo() {
                   <div>
                     <span>지금 확인한 시장 상황 · 공개 데이터</span>
                     <strong>{formatKrw(market.quote.latestPrice)}</strong>
-                    <p>{market.provenance.delayNotice}</p>
+                    <p>{beginnerDelayNotice(market.provenance.delayNotice)}</p>
                   </div>
                 </div>
               ) : null}
@@ -1153,7 +1224,6 @@ export function SecurityTradingDemo() {
                 aiMessage={aiMessage}
                 canPracticeOrder={canPracticeOrder}
                 aiExplanationEnabled={concern === "PRE_BUY"}
-                orderStylePreference={orderStylePreference}
                 onSelectPlan={setSelectedPlanId}
                 onChangeRegret={changeRegret}
                 onRequestAi={() =>
@@ -1163,14 +1233,6 @@ export function SecurityTradingDemo() {
                     coreDecision?.preferredPlanId ?? presentedDecision.preferredPlanId,
                   )
                 }
-                onChangeOrderStyle={(preference) => {
-                  setOrderStylePreference(preference);
-                  setPositionDraft((current) => ({
-                    ...current,
-                    orderStylePreference: preference,
-                  }));
-                  setChallengeChangeSummary(null);
-                }}
                 onOpenOrder={() => setOrderOpen(true)}
               />
 
@@ -1178,7 +1240,7 @@ export function SecurityTradingDemo() {
                 <aside className="agentic-loop-summary" role="status">
                   <strong>반대 의견에 답한 뒤 계획이 달라졌어요</strong>
                   <p>{challengeChangeSummary}</p>
-                  <small>AI가 계획을 고친 것이 아니라, 답변을 받은 결정 코어가 다시 계산했습니다.</small>
+                  <small>AI가 계획을 고친 것이 아니라, 답변을 받은 계획 계산기가 다시 계산했습니다.</small>
                 </aside>
               ) : null}
 
@@ -1190,20 +1252,45 @@ export function SecurityTradingDemo() {
                 className="execution-challenge"
               />
 
-              <div className="agent-tool-flow" aria-label="계획 생성 과정">
-                {[
-                  { label: "공개 데이터 확인", complete: true },
-                  { label: "사용자 조건 정리", complete: true },
-                  { label: "실행안 계산", complete: true },
-                  { label: "후회 비교", complete: true },
-                  { label: "AI 설명 검증", complete: aiState === "SUCCESS" },
-                  { label: "모의 주문 준비", complete: orderSidecar !== null },
-                ].map((tool) => (
-                  <span key={tool.label} className={tool.complete ? "is-complete" : undefined}>
-                    {tool.label}
+              <details className="plan-making-summary">
+                <summary>
+                  <span className="plan-making-summary__heading">
+                    <strong>이 계획은 어떻게 만들었나요?</strong>
+                    <small>공개 시장 데이터와 내 답변으로 수량과 금액을 계산했어요.</small>
                   </span>
-                ))}
-              </div>
+                  <span className="plan-making-summary__toggle" aria-hidden="true">
+                    <span className="plan-making-summary__open-label">과정 보기</span>
+                    <span className="plan-making-summary__close-label">접기</span>
+                  </span>
+                </summary>
+
+                <ol className="plan-making-summary__steps">
+                  <li>
+                    <strong>시장 정보 확인</strong>
+                    <span>Yahoo Finance 공개 데이터의 가격, 거래량, 기준 시각을 확인했어요.</span>
+                  </li>
+                  <li>
+                    <strong>내 답변으로 계획 계산</strong>
+                    <span>예산이나 보유 수량, 기한, 감당 범위로 회차별 수량과 다시 확인할 조건을 계산했어요.</span>
+                  </li>
+                  <li data-state={aiState.toLowerCase()}>
+                    <strong>AI가 선택 차이를 설명</strong>
+                    <span>
+                      {aiState === "SUCCESS"
+                        ? "계산된 숫자를 바꾸지 않고 선택마다 무엇이 다른지 쉬운 말로 설명했어요."
+                        : aiState === "LOADING"
+                          ? "계산된 숫자를 바꾸지 않는 설명인지 확인하고 있어요."
+                          : aiState === "FAILURE"
+                            ? "AI 설명을 안전하게 확인하지 못해 표시하지 않았어요. 계산 결과는 그대로 볼 수 있어요."
+                            : "AI 설명은 아직 요청하지 않았어요. 계산 결과는 AI 없이도 확인할 수 있어요."}
+                    </span>
+                  </li>
+                </ol>
+
+                <p className="plan-making-summary__boundary">
+                  수량, 금액, 다시 확인할 조건은 계획 계산기가 만들며 AI는 이 값을 바꿀 수 없습니다.
+                </p>
+              </details>
 
               {evidenceEnvelope ? (
                 <PlanEvidencePanel
@@ -1220,17 +1307,16 @@ export function SecurityTradingDemo() {
           {agentOpen ? (
             concern === "HOLDING_ANXIETY" || concern === "SELL_TIMING" ? (
               <PositionCoachPanel
+                key={concern}
                 concern={concern}
                 value={positionDraft}
                 result={positionCoach}
-                selectedPlanId={selectedPlan?.id ?? null}
                 disabled={false}
                 hideTimeAxis={timeAxisDismissed}
                 errorMessage={agentError}
                 onChange={changePositionDraft}
                 onSubmit={submitPositionCoach}
                 onClose={closeAgent}
-                onSelectPlan={setSelectedPlanId}
                 onTimeAxisAction={handleTimeAxisAction}
               />
             ) : (
@@ -1244,15 +1330,26 @@ export function SecurityTradingDemo() {
                 onInputChange={setInput}
                 onContinue={continueConversation}
                 onBack={goBack}
-                onEdit={editStep}
                 onClose={closeAgent}
               />
             )
           ) : (
             <aside className="agent-rail__empty">
-              <span>매매 동반자</span>
+              <div className="agent-rail__identity">
+                <span className="agent-ai-badge" aria-hidden="true">AI</span>
+                <span>
+                  <strong>AI 매매 동반자</strong>
+                  <small>공개 데이터 연결 준비됨</small>
+                </span>
+                <span className="agent-rail__ready">대화 시작</span>
+              </div>
               <h2>지금 어떤 고민을 함께 풀어볼까요?</h2>
               <p>공개 시장 정보와 내가 정한 감당 범위를 나눠 보고, 주문 전후의 선택을 함께 비교합니다.</p>
+              <div className="agent-ai-flow" aria-label="AI 매매 동반자가 계획을 만드는 순서">
+                <span><strong>1</strong>시장 정보 확인</span>
+                <span><strong>2</strong>조건으로 계획 계산</span>
+                <span><strong>3</strong>AI가 쉽게 설명</span>
+              </div>
               <div className="agent-entry-choices">
                 <button type="button" onClick={() => openConcern("PRE_BUY")} disabled={!marketSupported}>
                   살까 고민돼요
@@ -1264,6 +1361,10 @@ export function SecurityTradingDemo() {
                   팔 시점을 고민하고 있어요
                 </button>
               </div>
+              <details className="agent-ai-boundary">
+                <summary>AI는 어떤 도움을 주나요?</summary>
+                <p>AI는 질문과 설명을 맡고, 가격·수량·다시 확인할 조건은 검증된 공개 데이터와 계획 계산기가 계산합니다.</p>
+              </details>
             </aside>
           )}
         </div>

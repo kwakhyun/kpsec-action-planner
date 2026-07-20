@@ -21,13 +21,9 @@ type ExecutionOptionsPanelProps = {
   aiMessage: string | null;
   canPracticeOrder: boolean;
   aiExplanationEnabled?: boolean;
-  orderStylePreference: "FAST_EXECUTION" | "PRICE_CONTROL" | "UNSURE";
   onSelectPlan: (planId: ExecutionPlan["id"]) => void;
   onChangeRegret: (regret: DecisionConversationInput["regretPriority"]) => void;
   onRequestAi: () => void;
-  onChangeOrderStyle: (
-    preference: "FAST_EXECUTION" | "PRICE_CONTROL" | "UNSURE",
-  ) => void;
   onOpenOrder: () => void;
 };
 
@@ -54,11 +50,9 @@ export function ExecutionOptionsPanel({
   aiMessage,
   canPracticeOrder,
   aiExplanationEnabled = true,
-  orderStylePreference,
   onSelectPlan,
   onChangeRegret,
   onRequestAi,
-  onChangeOrderStyle,
   onOpenOrder,
 }: ExecutionOptionsPanelProps) {
   const selectedPlan =
@@ -70,15 +64,15 @@ export function ExecutionOptionsPanel({
     <section className="execution-options" aria-labelledby="execution-options-title">
       <header className="execution-options__header">
         <div>
-          <span>후회 예산으로 다시 계산</span>
-          <h2 id="execution-options-title">지금 입력이라면 먼저 검토할 실행안</h2>
+          <span>내가 더 걱정한 상황을 반영했어요</span>
+          <h2 id="execution-options-title">먼저 비교해 볼 방법</h2>
           <p>
-            결정 코어는 <strong>{planLabel(decision.preferredPlanId)}</strong>을 먼저
-            비교하도록 정리했습니다.
+            입력한 답변을 기준으로 <strong>{planLabel(decision.preferredPlanId)}</strong>을
+            먼저 보여드려요.
           </p>
         </div>
         <strong className="execution-options__not-prediction">
-          가격 예측이 아닌 검토 계획
+          미래 가격을 예측한 결과가 아니에요
         </strong>
       </header>
 
@@ -87,6 +81,7 @@ export function ExecutionOptionsPanel({
           <span>더 피하고 싶은 상황</span>
           <button
             type="button"
+            className="chip"
             aria-pressed={input.regretPriority === "MISSED_OPPORTUNITY"}
             onClick={() => onChangeRegret("MISSED_OPPORTUNITY")}
           >
@@ -94,6 +89,7 @@ export function ExecutionOptionsPanel({
           </button>
           <button
             type="button"
+            className="chip"
             aria-pressed={input.regretPriority === "PRICE_RISK"}
             onClick={() => onChangeRegret("PRICE_RISK")}
           >
@@ -129,14 +125,19 @@ export function ExecutionOptionsPanel({
               <span>{decision.preferredPlanId === plan.id ? "우선 검토" : "비교안"}</span>
               <h3>{planLabel(plan.id)}</h3>
               <strong>{plan.totalShares.toLocaleString("ko-KR")}주</strong>
-              <small>{formatKrw(plan.referenceTotalAmountKrw)}</small>
+              <small className="execution-option__total-amount">
+                <span>기준금액</span>
+                <strong>{formatKrw(plan.referenceTotalAmountKrw)}</strong>
+              </small>
             </button>
             <ol aria-label={`${planLabel(plan.id)} 회차별 수량`}>
               {plan.allocations.map((allocation) => (
                 <li key={`${plan.id}-${allocation.sequence}`}>
                   <span>{allocation.sequence}회차</span>
                   <strong>{allocation.shares.toLocaleString("ko-KR")}주</strong>
-                  <small>{formatKrw(allocation.amountKrw)}</small>
+                  <small className="execution-option__allocation-amount">
+                    {formatKrw(allocation.amountKrw)}
+                  </small>
                 </li>
               ))}
             </ol>
@@ -148,21 +149,21 @@ export function ExecutionOptionsPanel({
 
       <div className="execution-options__explanation">
         <div>
-          <span>{explanation ? "AI가 쉽게 풀어쓴 이유" : "결정 코어가 고른 이유"}</span>
+          <span>{explanation ? "AI가 쉽게 설명한 이유" : "이 방법을 먼저 보여드리는 이유"}</span>
           <p>{explanation?.priorityReason ?? decision.preferredExplanation}</p>
         </div>
         {aiExplanationEnabled && aiState === "IDLE" ? (
-          <button type="button" onClick={onRequestAi}>
-            AI로 이유 설명받기
+          <button type="button" className="btn btn--secondary" onClick={onRequestAi}>
+            AI에게 쉽게 설명받기
           </button>
         ) : null}
-        {aiExplanationEnabled && aiState === "LOADING" ? <small>AI 설명을 안전하게 확인하고 있어요.</small> : null}
+        {aiExplanationEnabled && aiState === "LOADING" ? <small>AI가 쉬운 설명을 정리하고 있어요.</small> : null}
         {aiExplanationEnabled && aiState === "FAILURE" ? (
           <div className="execution-options__ai-error">
             <small>
-              {aiMessage ?? "AI 설명을 확인하지 못해 새 설명을 표시하지 않았습니다."}
+              {aiMessage ?? "AI가 쉬운 설명을 만들지 못했습니다. 계산된 비교안은 바뀌지 않았어요."}
             </small>
-            <button type="button" onClick={onRequestAi}>AI 설명 다시 확인</button>
+            <button type="button" className="btn btn--secondary" onClick={onRequestAi}>쉬운 설명 다시 받아보기</button>
           </div>
         ) : null}
       </div>
@@ -176,63 +177,23 @@ export function ExecutionOptionsPanel({
         <p>{selectedPlan.reviewLine.meaning}</p>
       </div>
 
-      <section className="execution-options__order-coach" aria-labelledby="order-coach-title">
-        <div>
-          <span>주문 방식 코치</span>
-          <h3 id="order-coach-title">무엇을 더 중요하게 생각하나요?</h3>
-          <p>
-            실시간 호가를 확인하지 않았습니다. 최적 지정가·예상 가격 차이·체결 가능성은 계산하지 않습니다.
-          </p>
-        </div>
-        <div role="group" aria-label="주문 방식 우선순위">
-          <button
-            type="button"
-            aria-pressed={orderStylePreference === "FAST_EXECUTION"}
-            onClick={() => onChangeOrderStyle("FAST_EXECUTION")}
-          >
-            가격이 조금 달라도 빨리 거래
-          </button>
-          <button
-            type="button"
-            aria-pressed={orderStylePreference === "PRICE_CONTROL"}
-            onClick={() => onChangeOrderStyle("PRICE_CONTROL")}
-          >
-            원하는 가격을 지키기
-          </button>
-          <button
-            type="button"
-            aria-pressed={orderStylePreference === "UNSURE"}
-            onClick={() => onChangeOrderStyle("UNSURE")}
-          >
-            아직 잘 모르겠어요
-          </button>
-        </div>
-        <div className="execution-options__order-coach-copy">
-          <article>
-            <strong>시장가</strong>
-            <p>체결 가능성은 높지만 실제 가격이 달라질 수 있습니다.</p>
-          </article>
-          <article>
-            <strong>지정가</strong>
-            <p>가격을 통제하지만 거래가 완료되지 않을 수 있습니다.</p>
-          </article>
-        </div>
-      </section>
-
-      <button
-        type="button"
-        className="execution-options__order-button"
-        onClick={onOpenOrder}
-        disabled={!canPracticeOrder}
-      >
-        {canPracticeOrder
-          ? selectedPlan.installmentCount === 1
-            ? "일괄 주문 미리보기"
-            : `${selectedPlan.installmentCount}회 분할 주문 미리보기`
-          : aiState === "LOADING"
-            ? "AI 설명 확인 후 주문 연습 가능"
-            : "안전 확인이 끝나면 주문 연습 가능"}
-      </button>
+      <div className="execution-options__order-action">
+        <p>시장가와 지정가의 차이는 주문 미리보기에서 선택한 계획과 함께 확인할 수 있어요.</p>
+        <button
+          type="button"
+          className="execution-options__order-button btn btn--primary"
+          onClick={onOpenOrder}
+          disabled={!canPracticeOrder}
+        >
+          {canPracticeOrder
+            ? selectedPlan.installmentCount === 1
+              ? "일괄 주문 미리보기"
+              : `${selectedPlan.installmentCount}회 분할 주문 미리보기`
+            : aiState === "LOADING"
+              ? "설명이 준비되면 주문 연습 가능"
+              : "쉬운 설명을 다시 확인하면 주문 연습 가능"}
+        </button>
+      </div>
     </section>
   );
 }

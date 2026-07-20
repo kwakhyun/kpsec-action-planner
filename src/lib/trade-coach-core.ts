@@ -69,20 +69,20 @@ function buildOrderStyleCoach(
     },
     marketOrder: {
       label: "시장가",
-      benefit: "현재 주문 상황에서 체결 가능성을 우선해 주문을 냅니다.",
+      benefit: "가격이 조금 달라질 수 있어도 거래가 빨리 끝나는 쪽을 우선합니다.",
       tradeoff: "주문을 누른 때와 실제 체결 가격이 달라질 수 있습니다.",
     },
     limitOrder: {
       label: "지정가",
       benefit: "사용자가 정한 가격 범위를 넘지 않도록 주문 가격을 통제합니다.",
-      tradeoff: "상대 주문이 맞지 않으면 일부 또는 전부가 체결되지 않을 수 있습니다.",
+      tradeoff: "내가 정한 가격에 거래할 사람이 없으면 일부 또는 전부가 끝나지 않을 수 있습니다.",
     },
     rationale,
     limitPriceKrw: null,
     estimatedSlippagePercent: null,
     fillProbabilityPercent: null,
     limitation:
-      "실시간 호가를 확인하지 않았습니다. 최적 지정가·예상 가격 차이·체결 가능성은 계산하지 않습니다.",
+      "지금 시장의 주문 가격과 대기 물량을 확인하지 않았습니다. 가장 알맞은 지정가·실제 가격 차이·거래 완료 가능성은 계산하지 않습니다.",
   };
 }
 
@@ -121,13 +121,13 @@ function buildTimeAxisCoach(input: TradeCoachInput): TimeAxisCoach {
       ? `${horizonLabel} 보유할 계획인데 지금은 ${intervalLabel} 움직임을 보고 있어요. 아주 짧은 움직임이 원래 계획보다 크게 느껴질 수 있습니다.`
       : `지금 보는 ${intervalLabel} 차트와 ${horizonLabel} 보유 계획 사이에 큰 시간 차이는 확인되지 않았습니다.`,
     actions: [
-      { key: "WIDEN_TO_DAILY", label: "일봉으로 시야 넓히기" },
+      { key: "WIDEN_TO_DAILY", label: "하루 단위 차트로 넓혀 보기" },
       { key: "REVIEW_ORIGINAL_PLAN", label: "원래 계획 다시 보기" },
       { key: "KEEP_CURRENT_CHART", label: "지금 차트 계속 보기" },
     ],
     forcedChange: false,
     limitation:
-      "시간축 안내는 매매 신호가 아니며 사용자가 선택한 차트를 강제로 바꾸지 않습니다.",
+      "이 안내는 사고팔 때를 알려주는 신호가 아닙니다. 차트는 사용자가 그대로 선택할 수 있습니다.",
   };
 }
 
@@ -171,7 +171,7 @@ function pickSellPlan(
     preferredPlanId: corePreferredPlanId,
     selectionBasis: "CORE_COMPARISON_WHILE_UNSURE",
     explanation:
-      "전량과 분할 사이에서 아직 정하지 못해 감당 범위·최근 관측 범위·실행기한으로 계산한 비교안을 먼저 보여줍니다.",
+      "한 번에 팔지 나누어 팔지 아직 정하지 못해, 감당할 수 있는 손실·최근 실제 가격 범위·결정 기한으로 비교한 방법을 먼저 보여줍니다.",
   };
 }
 
@@ -289,7 +289,7 @@ export function calculateTradeCoach(rawInput: unknown): TradeCoachResult {
       return fail("UNSAFE_NUMERIC_RANGE", [
         {
           path: "position",
-          message: "보유금액과 재확인선을 안전하게 계산할 수 없습니다.",
+          message: "보유금액과 다시 확인할 가격을 안전하게 계산할 수 없습니다.",
         },
       ]);
     }
@@ -312,7 +312,7 @@ export function calculateTradeCoach(rawInput: unknown): TradeCoachResult {
             ? "LOSS"
             : "EVEN",
       meaning:
-        "현재 평가손익은 사용자가 입력한 평균 매수가와 공개 데이터의 최근 가격으로만 계산했습니다.",
+        "현재 손익은 사용자가 입력한 평균 매수가와 공개 데이터의 최근 가격으로만 계산했습니다.",
     };
 
     const lossReviewValueKrw = safeMoney(
@@ -333,7 +333,7 @@ export function calculateTradeCoach(rawInput: unknown): TradeCoachResult {
       positionValueAtReviewKrw: lossReviewValueKrw,
       profitLossAmountAtReviewKrw: lossReviewValueKrw - investedAmountKrw,
       meaning:
-        "사용자가 입력한 감당 가능한 손실 범위를 가격과 금액으로 바꾼 재확인선입니다. 손절가 예측이나 자동 주문 조건이 아닙니다.",
+        "사용자가 입력한 감당 가능한 손실 범위를 가격과 금액으로 바꾼 기준입니다. 손절가 예측이나 자동 주문 조건이 아닙니다.",
     };
 
     if (input.profitCriterionPercent !== null) {

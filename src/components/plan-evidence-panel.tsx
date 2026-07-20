@@ -80,7 +80,7 @@ export function PlanEvidencePanel({
 
       <div className="plan-evidence-panel__content">
         <p className="plan-evidence-panel__boundary">
-          시장 숫자와 실행 수량은 검증된 데이터와 결정 코어가 만들고, AI는 그 선택의 차이만
+          시장 숫자와 실행 수량은 검증된 데이터와 계획 계산기가 만들고, AI는 그 선택의 차이만
           쉬운 말로 설명합니다.
         </p>
 
@@ -149,7 +149,7 @@ export function PlanEvidencePanel({
                 </div>
                 <div>
                   <dt>조회 구간</dt>
-                  <dd>{market.range} · {market.interval} 간격</dd>
+                  <dd>최근 3개월 · 하루 간격</dd>
                 </div>
                 {usedTradingSessionCount !== null ? (
                   <div>
@@ -162,18 +162,18 @@ export function PlanEvidencePanel({
                   <dd>{formatKrw(market.metrics.latestPrice)}</dd>
                 </div>
                 <div>
-                  <dt>최근 변동성</dt>
+                  <dt>최근 20일 가격 흔들림 참고값</dt>
                   <dd>{formatPercent(market.metrics.volatility20dPct)}</dd>
                 </div>
                 <div>
-                  <dt>최근 고저 범위</dt>
+                  <dt>최근 20일 가장 낮은 가격–높은 가격</dt>
                   <dd>
                     {formatKrw(market.metrics.range20d.low)}–
                     {formatKrw(market.metrics.range20d.high)} · 폭 {formatPercent(market.metrics.range20d.percent)}
                   </dd>
                 </div>
                 <div>
-                  <dt>평균 대비 거래량</dt>
+                  <dt>평소 대비 최근 거래량</dt>
                   <dd>
                     {market.metrics.relativeVolume20d === null
                       ? "계산할 수 없음"
@@ -203,7 +203,7 @@ export function PlanEvidencePanel({
         <section className="plan-evidence-panel__group" aria-labelledby="evidence-decision-core">
           <header className="plan-evidence-panel__group-heading">
             <span>계획으로 계산한 내용</span>
-            <strong id="evidence-decision-core">결정 코어</strong>
+            <strong id="evidence-decision-core">계획 계산기</strong>
           </header>
           {decision && selectedPlan ? (
             <>
@@ -232,7 +232,7 @@ export function PlanEvidencePanel({
                   </dd>
                 </div>
               </dl>
-              <ol className="plan-evidence-panel__allocations" aria-label="결정 코어가 계산한 회차별 수량">
+              <ol className="plan-evidence-panel__allocations" aria-label="계획 계산기가 계산한 회차별 수량">
                 {selectedPlan.allocations.map((allocation) => (
                   <li key={`${selectedPlan.id}-${allocation.sequence}`}>
                     <span>{allocation.sequence}회차</span>

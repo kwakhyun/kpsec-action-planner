@@ -72,7 +72,7 @@ test("보유 후 평가손익과 사용자 손실·이익 재확인선을 결정
     profitLossPercent: -20,
     direction: "LOSS",
     meaning:
-      "현재 평가손익은 사용자가 입력한 평균 매수가와 공개 데이터의 최근 가격으로만 계산했습니다.",
+      "현재 손익은 사용자가 입력한 평균 매수가와 공개 데이터의 최근 가격으로만 계산했습니다.",
   });
   assert.equal(result.reviewLines.loss?.reviewPriceKrw, 92_000);
   assert.equal(result.reviewLines.loss?.profitLossAmountAtReviewKrw, -800_000);
@@ -108,7 +108,7 @@ test("시장가·지정가 코치는 호가·최적가·슬리피지·체결 확
   assert.equal(result.orderStyle.limitPriceKrw, null);
   assert.equal(result.orderStyle.estimatedSlippagePercent, null);
   assert.equal(result.orderStyle.fillProbabilityPercent, null);
-  assert.match(result.orderStyle.limitation, /실시간 호가를 확인하지 않았습니다/);
+  assert.match(result.orderStyle.limitation, /주문 가격과 대기 물량을 확인하지 않았습니다/);
 });
 
 test("분봉과 장기 계획의 불일치는 관찰 행동만 설명하고 세 선택을 강제하지 않는다", () => {
@@ -124,5 +124,33 @@ test("분봉과 장기 계획의 불일치는 관찰 행동만 설명하고 세 
     ["WIDEN_TO_DAILY", "REVIEW_ORIGINAL_PLAN", "KEEP_CURRENT_CHART"],
   );
   assert.equal(result.timeAxis.forcedChange, false);
-  assert.match(result.timeAxis.limitation, /강제로 바꾸지 않습니다/);
+  assert.match(result.timeAxis.limitation, /차트는 사용자가 그대로 선택할 수 있습니다/);
+});
+
+test("분 단위 가이드는 보유 후·매도 계획이 분 단위보다 길 때만 표시한다", () => {
+  const shortPlan = calculateTradeCoach({
+    ...POSITION_INPUT,
+    horizon: "DAYS",
+    deadline: "TODAY",
+  });
+  assert.equal(shortPlan.ok, true);
+  if (!shortPlan.ok) return;
+  assert.equal(shortPlan.timeAxis.mismatchDetected, false);
+
+  const longerDeadline = calculateTradeCoach({
+    ...POSITION_INPUT,
+    horizon: "DAYS",
+    deadline: "THIS_WEEK",
+  });
+  assert.equal(longerDeadline.ok, true);
+  if (!longerDeadline.ok) return;
+  assert.equal(longerDeadline.timeAxis.mismatchDetected, true);
+
+  const dailyChart = calculateTradeCoach({
+    ...POSITION_INPUT,
+    selectedChartInterval: "DAILY",
+  });
+  assert.equal(dailyChart.ok, true);
+  if (!dailyChart.ok) return;
+  assert.equal(dailyChart.timeAxis.mismatchDetected, false);
 });

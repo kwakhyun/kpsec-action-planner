@@ -22,10 +22,19 @@ import {
 } from "recharts";
 
 import type { IntradayMarketView } from "@/lib/intraday-market";
+import type { ChartHistoryView } from "@/lib/chart-history";
+import {
+  aggregateChartBars,
+  CHART_UNIT_ACCESSIBLE_LABELS,
+  CHART_UNIT_LABELS,
+  MAX_CHART_ZOOM_LEVEL,
+  zoomChartBars,
+  type ChartUnit,
+} from "@/lib/chart-series";
 
 import styles from "./security-candlestick-chart.module.css";
 
-export type CandlestickPeriod = "1D" | "1W" | "1M" | "3M";
+export type CandlestickPeriod = ChartUnit;
 export type MovingAverageWindow = 5 | 20 | 60;
 
 export type SecurityCandleBar = Readonly<{
@@ -77,6 +86,8 @@ export type SecurityCandlestickChartProps = Readonly<{
   dailyBars: readonly SecurityCandleBar[];
   intraday?: IntradayMarketView | null;
   intradayUnavailableReason?: string | null;
+  history?: ChartHistoryView | null;
+  historyUnavailableReason?: string | null;
   currency?: string | null;
   exchangeTimezone?: string | null;
   period?: CandlestickPeriod;
@@ -97,18 +108,7 @@ type ChartPoint = SecurityCandleBar & {
   ma60: number | null;
 };
 
-const PERIOD_LABELS: Record<CandlestickPeriod, string> = {
-  "1D": "1일",
-  "1W": "1주",
-  "1M": "1개월",
-  "3M": "3개월",
-};
-
-const PERIOD_WINDOW_SECONDS: Record<Exclude<CandlestickPeriod, "1D">, number> = {
-  "1W": 7 * 24 * 60 * 60,
-  "1M": 31 * 24 * 60 * 60,
-  "3M": 93 * 24 * 60 * 60,
-};
+const CHART_UNITS = ["MINUTE", "DAY", "WEEK", "MONTH", "YEAR"] as const;
 
 const MA_COLORS: Record<MovingAverageWindow, string> = {
   5: "#e38100",
@@ -222,24 +222,19 @@ export function buildSecurityChartObservation(
   };
 }
 
-function barsForPeriod(
-  bars: readonly ChartPoint[],
-  period: Exclude<CandlestickPeriod, "1D">,
-): ChartPoint[] {
-  const latestTimestamp = bars.at(-1)?.timestamp;
-  if (!latestTimestamp) return [];
-  const cutoff = latestTimestamp - PERIOD_WINDOW_SECONDS[period];
-  return bars.filter((bar) => bar.timestamp >= cutoff);
-}
-
 function safeDateTime(
   timestamp: number,
-  intraday: boolean,
+  unit: CandlestickPeriod,
   exchangeTimezone: string | null,
 ): string {
-  const options: Intl.DateTimeFormatOptions = intraday
-    ? { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
-    : { month: "short", day: "numeric" };
+  const options: Intl.DateTimeFormatOptions =
+    unit === "MINUTE"
+      ? { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
+      : unit === "YEAR"
+        ? { year: "numeric" }
+        : unit === "MONTH"
+          ? { year: "numeric", month: "long" }
+          : { year: "numeric", month: "short", day: "numeric" };
   if (exchangeTimezone) options.timeZone = exchangeTimezone;
   try {
     return new Intl.DateTimeFormat("ko-KR", options).format(
@@ -319,7 +314,7 @@ type CandleTooltipProps = {
   payload?: readonly Readonly<{ payload?: unknown }>[];
   currency: string | null;
   exchangeTimezone: string | null;
-  intraday: boolean;
+  unit: CandlestickPeriod;
 };
 
 function CandleTooltip({
@@ -327,7 +322,7 @@ function CandleTooltip({
   payload,
   currency,
   exchangeTimezone,
-  intraday,
+  unit,
 }: CandleTooltipProps) {
   const point = payload?.find((item) => item.payload)?.payload as
     | ChartPoint
@@ -337,7 +332,7 @@ function CandleTooltip({
   return (
     <div className={styles.tooltip}>
       <strong>
-        {safeDateTime(point.timestamp, intraday, exchangeTimezone)}
+        {safeDateTime(point.timestamp, unit, exchangeTimezone)}
       </strong>
       <div className={styles.tooltipGrid}>
         <span>시작 {formatPrice(point.open, currency)}</span>
@@ -387,10 +382,12 @@ export const SecurityCandlestickChart = forwardRef<
     dailyBars,
     intraday = null,
     intradayUnavailableReason = null,
+    history = null,
+    historyUnavailableReason = null,
     currency = null,
     exchangeTimezone = null,
     period: controlledPeriod,
-    defaultPeriod = "3M",
+    defaultPeriod = "DAY",
     onPeriodChange,
     averageCost = null,
     planOverlay,
@@ -402,22 +399,50 @@ export const SecurityCandlestickChart = forwardRef<
   ref,
 ) {
   const intradayAvailable = (intraday?.bars.length ?? 0) >= 12;
-  const safeDefaultPeriod =
-    defaultPeriod === "1D" && !intradayAvailable ? "3M" : defaultPeriod;
-  const [uncontrolledPeriod, setUncontrolledPeriod] =
-    useState<CandlestickPeriod>(safeDefaultPeriod);
-  const requestedPeriod = controlledPeriod ?? uncontrolledPeriod;
-  const activePeriod =
-    requestedPeriod === "1D" && !intradayAvailable ? "3M" : requestedPeriod;
   const [selectedAverages, setSelectedAverages] = useState<
     ReadonlySet<MovingAverageWindow>
   >(() => new Set(defaultMovingAverages));
+  const [zoomLevel, setZoomLevel] = useState(0);
 
   const normalizedDaily = useMemo(() => normalizeBars(dailyBars), [dailyBars]);
+  const normalizedHistory = useMemo(
+    () => normalizeBars(history?.bars ?? normalizedDaily),
+    [history, normalizedDaily],
+  );
   const dailyPoints = useMemo(
     () => withMovingAverages(normalizedDaily),
     [normalizedDaily],
   );
+  const calendarPoints = useMemo(
+    () => ({
+      WEEK: withMovingAverages(
+        aggregateChartBars(normalizedHistory, "WEEK", exchangeTimezone),
+      ),
+      MONTH: withMovingAverages(
+        aggregateChartBars(normalizedHistory, "MONTH", exchangeTimezone),
+      ),
+      YEAR: withMovingAverages(
+        aggregateChartBars(normalizedHistory, "YEAR", exchangeTimezone),
+      ),
+    }),
+    [exchangeTimezone, normalizedHistory],
+  );
+  const unitAvailable: Record<CandlestickPeriod, boolean> = {
+    MINUTE: intradayAvailable,
+    DAY: dailyPoints.length >= 2,
+    WEEK: calendarPoints.WEEK.length >= 2,
+    MONTH: calendarPoints.MONTH.length >= 2,
+    YEAR: calendarPoints.YEAR.length >= 2 && history !== null,
+  };
+  const safeDefaultPeriod = unitAvailable[defaultPeriod]
+    ? defaultPeriod
+    : "DAY";
+  const [uncontrolledPeriod, setUncontrolledPeriod] =
+    useState<CandlestickPeriod>(safeDefaultPeriod);
+  const requestedPeriod = controlledPeriod ?? uncontrolledPeriod;
+  const activePeriod = unitAvailable[requestedPeriod]
+    ? requestedPeriod
+    : "DAY";
   const fallbackObservation = useMemo(
     () => buildSecurityChartObservation(normalizedDaily),
     [normalizedDaily],
@@ -425,27 +450,57 @@ export const SecurityCandlestickChart = forwardRef<
   const observation = serverObservation ?? fallbackObservation;
   const latestDailyAverages = dailyPoints.at(-1);
 
-  const visibleBars = useMemo(() => {
-    if (activePeriod === "1D" && intraday) {
-      return withMovingAverages(normalizeBars(intraday.bars)).map((bar) => ({
-        ...bar,
-        ma5: latestDailyAverages?.ma5 ?? null,
-        ma20: latestDailyAverages?.ma20 ?? null,
-        ma60: latestDailyAverages?.ma60 ?? null,
-      }));
+  const unitBars = useMemo(() => {
+    if (activePeriod === "MINUTE") {
+      if (!intraday) return dailyPoints;
+      return withMovingAverages(normalizeBars(intraday.bars)).map(
+        (bar): ChartPoint => ({
+          ...bar,
+          ma5: latestDailyAverages?.ma5 ?? null,
+          ma20: latestDailyAverages?.ma20 ?? null,
+          ma60: latestDailyAverages?.ma60 ?? null,
+        }),
+      );
     }
-    return barsForPeriod(
-      dailyPoints,
-      activePeriod === "1D" ? "3M" : activePeriod,
-    );
-  }, [activePeriod, dailyPoints, intraday, latestDailyAverages]);
+    if (activePeriod === "DAY") return dailyPoints;
+    if (activePeriod === "WEEK") return calendarPoints.WEEK;
+    if (activePeriod === "MONTH") return calendarPoints.MONTH;
+    return calendarPoints.YEAR;
+  }, [activePeriod, calendarPoints, dailyPoints, intraday, latestDailyAverages]);
+  const visibleBars = useMemo(
+    () => zoomChartBars(unitBars, zoomLevel),
+    [unitBars, zoomLevel],
+  );
+  const averageSourceCount =
+    activePeriod === "MINUTE" ? dailyPoints.length : unitBars.length;
+  const availableSelectedAverages = useMemo(
+    () =>
+      new Set(
+        [...selectedAverages].filter((window) => averageSourceCount >= window),
+      ),
+    [averageSourceCount, selectedAverages],
+  );
 
   const domain = useMemo(
-    () => chartDomain(visibleBars, averageCost, planOverlay, selectedAverages),
-    [averageCost, planOverlay, selectedAverages, visibleBars],
+    () =>
+      chartDomain(
+        visibleBars,
+        averageCost,
+        planOverlay,
+        availableSelectedAverages,
+      ),
+    [averageCost, availableSelectedAverages, planOverlay, visibleBars],
   );
   const maxVolume = Math.max(...visibleBars.map((bar) => bar.volume), 1);
-  const isIntraday = activePeriod === "1D";
+  const isIntraday = activePeriod === "MINUTE";
+  const averageWindowUnit =
+    activePeriod === "MINUTE" || activePeriod === "DAY"
+        ? "일"
+        : activePeriod === "WEEK"
+          ? "주"
+          : activePeriod === "MONTH"
+            ? "개월"
+            : "년";
 
   useImperativeHandle(
     ref,
@@ -458,12 +513,14 @@ export const SecurityCandlestickChart = forwardRef<
   );
 
   function selectPeriod(nextPeriod: CandlestickPeriod) {
-    if (nextPeriod === "1D" && !intradayAvailable) return;
+    if (!unitAvailable[nextPeriod]) return;
     if (controlledPeriod === undefined) setUncontrolledPeriod(nextPeriod);
+    setZoomLevel(0);
     onPeriodChange?.(nextPeriod);
   }
 
   function toggleAverage(window: MovingAverageWindow) {
+    if (averageSourceCount < window) return;
     setSelectedAverages((current) => {
       const next = new Set(current);
       if (next.has(window)) next.delete(window);
@@ -473,28 +530,47 @@ export const SecurityCandlestickChart = forwardRef<
   }
 
   const rootClassName = [styles.root, className].filter(Boolean).join(" ");
-  const accessibilitySummary = `${PERIOD_LABELS[activePeriod]} 공개 데이터 ${visibleBars.length}개를 표시합니다. ${observation.priceText} ${observation.volumeText}`;
+  const intradayResolutionLabel =
+    intraday?.provenance.interval === "1m" ? "1분 단위" : "5분 단위";
+  const intradayDelayNotice = intraday?.provenance.delayNotice.replace(
+    "실시간 호가가 아닙니다.",
+    "지금 주문 가능한 가격을 보여주는 데이터가 아닙니다.",
+  );
+  const accessibilitySummary = `${CHART_UNIT_LABELS[activePeriod]} 단위 공개 데이터 ${visibleBars.length}개를 표시합니다. ${observation.priceText} ${observation.volumeText}`;
+  const zoomSummary =
+    zoomLevel === 0 ? "전체 구간" : `최근 ${visibleBars.length}개 가격 막대`;
+  const unitUnavailableReason = (unit: CandlestickPeriod) => {
+    if (unit === "MINUTE") {
+      return (
+        intradayUnavailableReason ??
+        "충분한 1분·5분 공개 데이터가 확인되지 않았습니다."
+      );
+    }
+    if (unit === "YEAR") {
+      return (
+        historyUnavailableReason ??
+        "년 단위로 표시할 장기 공개 데이터를 확인하고 있습니다."
+      );
+    }
+    return "선택한 단위로 묶을 공개 데이터가 충분하지 않습니다.";
+  };
 
   return (
-    <section className={rootClassName} aria-label="공개 데이터 기반 캔들 차트">
+    <section className={rootClassName} aria-label="공개 데이터 기반 가격 차트">
       <div className={styles.toolbar}>
-        <div className={styles.periods} role="group" aria-label="차트 기간 선택">
-          {(["1D", "1W", "1M", "3M"] as const).map((period) => (
+        <div className={styles.periods} role="group" aria-label="차트 단위 선택">
+          {CHART_UNITS.map((period) => (
             <button
               key={period}
               type="button"
               className={styles.periodButton}
-              disabled={period === "1D" && !intradayAvailable}
+              disabled={!unitAvailable[period]}
               aria-pressed={activePeriod === period}
-              title={
-                period === "1D" && !intradayAvailable
-                  ? intradayUnavailableReason ??
-                    "충분한 1분·5분 공개 데이터가 확인되지 않았습니다."
-                  : undefined
-              }
+              aria-label={CHART_UNIT_ACCESSIBLE_LABELS[period]}
+              title={!unitAvailable[period] ? unitUnavailableReason(period) : undefined}
               onClick={() => selectPeriod(period)}
             >
-              {PERIOD_LABELS[period]}
+              {CHART_UNIT_LABELS[period]}
             </button>
           ))}
         </div>
@@ -503,31 +579,78 @@ export const SecurityCandlestickChart = forwardRef<
           <div
             className={styles.averageToggles}
             role="group"
-            aria-label="이동평균선 선택"
+            aria-label="가격 평균선 선택"
           >
-            <span>이동평균</span>
+            <span>가격 평균선</span>
             {([5, 20, 60] as const).map((window) => (
               <button
                 key={window}
                 type="button"
                 className={styles.averageButton}
-                aria-pressed={selectedAverages.has(window)}
+                disabled={averageSourceCount < window}
+                aria-pressed={availableSelectedAverages.has(window)}
+                title={
+                  averageSourceCount < window
+                    ? `${window}${averageWindowUnit} 평균을 계산할 데이터가 충분하지 않습니다.`
+                    : undefined
+                }
                 onClick={() => toggleAverage(window)}
               >
-                {window}일
+                {window}{averageWindowUnit}
               </button>
             ))}
+          </div>
+          <div className={styles.zoomControls} role="group" aria-label="차트 확대 조절">
+            <span aria-live="polite">{zoomSummary}</span>
+            <button
+              type="button"
+              className={styles.zoomButton}
+              disabled={zoomLevel >= MAX_CHART_ZOOM_LEVEL || visibleBars.length <= 2}
+              onClick={() =>
+                setZoomLevel((current) =>
+                  Math.min(MAX_CHART_ZOOM_LEVEL, current + 1),
+                )
+              }
+            >
+              확대
+            </button>
+            <button
+              type="button"
+              className={styles.zoomButton}
+              disabled={zoomLevel === 0}
+              onClick={() => setZoomLevel((current) => Math.max(0, current - 1))}
+            >
+              축소
+            </button>
+            <button
+              type="button"
+              className={styles.zoomButton}
+              disabled={zoomLevel === 0}
+              onClick={() => setZoomLevel(0)}
+            >
+              전체
+            </button>
           </div>
         </div>
       </div>
 
       <p className={styles.availability}>
         {isIntraday && intraday
-          ? `${intraday.provenance.resolutionLabel} 공개 데이터 · ${intraday.provenance.sampleCount}개 · ${intraday.provenance.delayNotice}`
-          : !intradayAvailable
-            ? `1일 차트 비활성화 · ${intradayUnavailableReason ?? "충분한 분봉 데이터가 확인되지 않았습니다."}`
-            : "일봉 공개 데이터 · 짧은 차트와 실행안 계산용 3개월 일봉은 분리됩니다."}
+          ? `${intradayResolutionLabel} 공개 데이터 · ${intraday.provenance.sampleCount}개 · ${intradayDelayNotice}`
+          : activePeriod === "DAY"
+            ? `최근 3개월 하루 단위 공개 데이터 · ${dailyPoints.length}개 · 실행안 계산에 사용한 데이터와 같습니다.`
+            : `${history ? "최근 5년" : "최근 3개월"} 하루 단위 가격을 ${CHART_UNIT_LABELS[activePeriod]} 단위로 묶었습니다 · ${unitBars.length}개 가격 막대${history ? " · 긴 기간 차트는 보기 전용이며 실행안 계산을 바꾸지 않습니다." : ""}`}
       </p>
+      {!intradayAvailable || !history ? (
+        <p className={styles.availabilityNote}>
+          {!intradayAvailable
+            ? `분 단위 비활성화 · ${intradayUnavailableReason ?? "충분한 분 단위 가격 데이터가 확인되지 않았습니다."}`
+            : null}
+          {!history
+            ? `${!intradayAvailable ? " " : ""}년 단위 비활성화 · ${historyUnavailableReason ?? "장기 공개 데이터를 확인하고 있습니다."}`
+            : null}
+        </p>
+      ) : null}
       <p className={styles.srOnly} aria-live="polite">
         {accessibilitySummary}
       </p>
@@ -552,7 +675,7 @@ export const SecurityCandlestickChart = forwardRef<
               <XAxis
                 dataKey="timestamp"
                 tickFormatter={(value) =>
-                  safeDateTime(Number(value), isIntraday, exchangeTimezone)
+                  safeDateTime(Number(value), activePeriod, exchangeTimezone)
                 }
                 tickLine={false}
                 axisLine={false}
@@ -582,7 +705,7 @@ export const SecurityCandlestickChart = forwardRef<
                     payload={props.payload}
                     currency={currency}
                     exchangeTimezone={exchangeTimezone}
-                    intraday={isIntraday}
+                    unit={activePeriod}
                   />
                 )}
                 isAnimationActive={false}
@@ -663,13 +786,13 @@ export const SecurityCandlestickChart = forwardRef<
               />
 
               {([5, 20, 60] as const).map((window) =>
-                selectedAverages.has(window) ? (
+                availableSelectedAverages.has(window) ? (
                   <Line
                     key={window}
                     yAxisId="price"
                     type="monotone"
                     dataKey={`ma${window}`}
-                    name={`${window}일 평균`}
+                    name={`${window}${averageWindowUnit} 평균`}
                     stroke={MA_COLORS[window]}
                     strokeWidth={1.6}
                     dot={false}
@@ -697,10 +820,12 @@ export const SecurityCandlestickChart = forwardRef<
           <i className={styles.legendSwatch} style={{ "--legend-color": "#b7b7b7" } as React.CSSProperties} />
           거래량
         </span>
-        {[...selectedAverages].sort((left, right) => left - right).map((window) => (
+        {[...availableSelectedAverages].sort((left, right) => left - right).map((window) => (
           <span key={window} className={styles.legendItem}>
             <i className={styles.legendLine} style={{ "--legend-color": MA_COLORS[window] } as React.CSSProperties} />
-            {isIntraday ? `일봉 ${window}일 평균` : `${window}일 평균`}
+            {isIntraday
+              ? `하루 단위 ${window}일 평균`
+              : `${window}${averageWindowUnit} 평균`}
           </span>
         ))}
         {averageCost && averageCost > 0 ? (
@@ -718,7 +843,7 @@ export const SecurityCandlestickChart = forwardRef<
       </div>
 
       <details className={styles.observation}>
-        <summary>이동평균선·거래량, 이게 무슨 뜻인가요?</summary>
+        <summary>가격 평균선·거래량, 이게 무슨 뜻인가요?</summary>
         <div className={styles.observationBody}>
           <ul>
             <li>{observation.priceText}</li>

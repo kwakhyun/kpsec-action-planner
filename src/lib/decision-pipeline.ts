@@ -100,27 +100,27 @@ function marketFailureMessage(code: MarketDataError["code"]): string {
 function aiFailureMessage(code: DecisionFailureCode): string {
   switch (code) {
     case "MISSING_CONFIGURATION":
-      return "AI 분석 설정을 확인할 수 없어 우선 검토안을 만들지 않았습니다.";
+      return "AI 설명 기능이 준비되지 않아 쉬운 설명을 만들지 못했습니다. 계산된 비교안은 그대로 볼 수 있어요.";
     case "TIMEOUT":
-      return "AI 응답이 늦어 우선 검토안을 만들지 않았습니다.";
+      return "AI 응답이 늦어 쉬운 설명을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.";
     case "AUTHENTICATION":
-      return "AI 연결 권한을 확인하지 못해 우선 검토안을 만들지 않았습니다.";
+      return "AI 연결을 확인하지 못해 쉬운 설명을 만들지 못했습니다. 계산된 비교안은 바뀌지 않았어요.";
     case "MODEL_ACCESS":
-      return "설정된 AI 모델을 사용할 수 없어 우선 검토안을 만들지 않았습니다.";
+      return "현재 AI를 사용할 수 없어 쉬운 설명을 만들지 못했습니다. 계산된 비교안은 바뀌지 않았어요.";
     case "QUOTA_OR_RATE_LIMIT":
-      return "AI 사용 한도 또는 일시적인 혼잡으로 우선 검토안을 만들지 않았습니다.";
+      return "AI가 잠시 혼잡해 쉬운 설명을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.";
     case "NETWORK":
-      return "외부 AI 네트워크에 연결하지 못해 우선 검토안을 만들지 않았습니다.";
+      return "AI에 연결하지 못해 쉬운 설명을 만들지 못했습니다. 인터넷 연결을 확인해 주세요.";
     case "REFUSAL":
-      return "AI가 설명을 만들지 않아 우선 검토안을 표시하지 않았습니다.";
+      return "AI가 이 요청을 설명하지 못했습니다. 계산된 비교안은 바뀌지 않았어요.";
     case "INCOMPLETE":
-      return "AI 설명이 끝까지 완성되지 않아 우선 검토안을 표시하지 않았습니다.";
+      return "AI 설명이 끝까지 완성되지 않았습니다. 계산된 비교안은 바뀌지 않았어요.";
     case "PARSE_ERROR":
     case "SCHEMA_ERROR":
     case "SEMANTIC_GUARD":
-      return "AI 설명을 안전하게 확인하지 못해 우선 검토안을 표시하지 않았습니다.";
+      return "AI 설명을 확인할 수 없어 표시하지 않았습니다. 계산된 비교안은 그대로예요.";
     default:
-      return "외부 AI에 연결하지 못해 우선 검토안을 만들지 않았습니다.";
+      return "AI가 쉬운 설명을 만들지 못했습니다. 계산된 비교안은 바뀌지 않았어요.";
   }
 }
 

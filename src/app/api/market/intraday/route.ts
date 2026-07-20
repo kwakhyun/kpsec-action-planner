@@ -283,13 +283,13 @@ function friendlyFailure(code: IntradayFailureCode): string {
     case "INVALID_SYMBOL":
       return "종목 코드를 확인해 주세요. 예: 삼성전자는 005930.KS입니다.";
     case "DATA_PROVIDER_FAILURE":
-      return "공개 시세 제공처에 연결하지 못해 1일 차트를 표시하지 않았습니다.";
+      return "공개 시세 제공처에 연결하지 못해 분 단위 차트를 표시하지 않았습니다.";
     case "DATA_SCHEMA_FAILURE":
-      return "받은 장중 데이터를 안전하게 확인할 수 없어 1일 차트를 표시하지 않았습니다.";
+      return "받은 장중 데이터를 안전하게 확인할 수 없어 분 단위 차트를 표시하지 않았습니다.";
     case "DATA_INSUFFICIENT":
-      return "1분·5분 데이터가 모두 부족해 1일 차트를 사용할 수 없습니다.";
+      return "1분·5분 데이터가 모두 부족해 분 단위 차트를 사용할 수 없습니다.";
     case "DATA_STALE":
-      return "장중 데이터가 오래되어 1일 차트로 표시하지 않았습니다.";
+      return "장중 데이터가 오래되어 분 단위 차트로 표시하지 않았습니다.";
   }
 }
 

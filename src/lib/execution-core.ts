@@ -424,7 +424,7 @@ function choosePreferredPlan(params: {
           : ("SHORT_DEADLINE" as const),
       ],
       preferredExplanation:
-        "나누어 진행하다 일부 기회를 놓치는 걱정을 우선 반영해 일괄안을 먼저 비교 대상으로 선택했습니다. 이 선택은 수익 예측이 아니라 입력한 후회 우선순위에 따른 것입니다.",
+        "기다리는 동안 가격이 올라 기회를 놓치는 상황을 더 걱정한다고 답했습니다. 그래서 한 번에 확인하는 방법을 먼저 보여드립니다. 수익을 예상해서 고른 것은 아닙니다.",
     };
   }
 
@@ -444,8 +444,8 @@ function choosePreferredPlan(params: {
         : ("SHORT_DEADLINE" as const),
     ],
     preferredExplanation: useThreeStages
-      ? "한 시점 가격 위험을 더 걱정하고 관측 범위가 감당 범위를 넘어, 같은 총수량을 세 번으로 나눈 안을 우선 비교 대상으로 선택했습니다."
-      : "한 시점 가격 위험을 더 걱정해, 같은 총수량을 두 번으로 나눈 안을 우선 비교 대상으로 선택했습니다.",
+      ? "한 번에 확인한 뒤 가격이 내려가는 상황을 더 걱정한다고 답했습니다. 최근 가격 움직임도 내가 정한 감당 범위보다 컸습니다. 그래서 세 번으로 나누는 방법을 먼저 보여드립니다."
+      : "한 번에 확인한 뒤 가격이 내려가는 상황을 더 걱정한다고 답했습니다. 그래서 두 번으로 나누는 방법을 먼저 보여드립니다.",
   };
 }
 
@@ -546,7 +546,7 @@ export function calculateRegretBudgetExecution(
     movePercent: input.maxMovePercent,
     lossPercent: input.maxLossPercent,
     meaning:
-      "이 가격들은 미래 예측이나 자동 주문 조건이 아니라 사용자 허용범위로 계산한 재검토선입니다.",
+      "이 가격 범위는 미래 예측이나 자동 주문 조건이 아닙니다. 내가 입력한 허용 범위를 벗어나면 계획을 다시 확인하라는 기준입니다.",
   };
   const unallocatedBudgetKrw =
     input.direction === "BUY"

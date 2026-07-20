@@ -1,9 +1,22 @@
 "use client";
 
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { createPortal } from "react-dom";
+
 import type {
   TradeCoachInput,
   TradeCoachSuccess,
 } from "../lib/trade-coach-contracts";
+import {
+  formatWholeNumberInput,
+  normalizeWholeNumberInput,
+} from "../lib/numeric-input";
 
 type PositionCoachInput = Exclude<
   TradeCoachInput,
@@ -31,15 +44,26 @@ export type PositionCoachPanelProps = {
   concern: PositionCoachInput["concern"];
   value: PositionCoachDraft;
   result: TradeCoachSuccess | null;
-  selectedPlanId?: PositionCoachPlanId | null;
   disabled?: boolean;
   hideTimeAxis?: boolean;
   errorMessage?: string | null;
   onChange: (field: PositionCoachDraftField, value: string) => void;
   onSubmit: () => void;
   onClose?: () => void;
-  onSelectPlan?: (planId: PositionCoachPlanId) => void;
   onTimeAxisAction?: (action: PositionCoachTimeAxisAction) => void;
+};
+
+type PositionCoachStep = 1 | 2 | 3 | 4;
+
+const subscribeToClient = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+const STEP_LABELS: Record<PositionCoachStep, string> = {
+  1: "보유 정보",
+  2: "계획 시간",
+  3: "감당 범위",
+  4: "매도와 주문 방식",
 };
 
 const HORIZON_OPTIONS: Array<{
@@ -62,22 +86,31 @@ const DEADLINE_OPTIONS: Array<{
   { value: "NO_RUSH", label: "급하지 않아요" },
 ];
 
+const DEADLINE_REFLECTIONS: Record<PositionCoachDraft["deadline"], string> = {
+  NOW: "지금 바로 해야 하는",
+  TODAY: "오늘 안에 해야 하는",
+  THIS_WEEK: "이번 주 안에 해야 하는",
+  NO_RUSH: "급하지 않은",
+};
+
 const SELL_PREFERENCE_OPTIONS: Array<{
   value: PositionCoachDraft["sellPlanPreference"];
   label: string;
+  description: string;
 }> = [
-  { value: "FULL", label: "전량 매도를 먼저 볼래요" },
-  { value: "STAGED", label: "나누어 매도를 먼저 볼래요" },
-  { value: "UNSURE", label: "둘 다 비교하고 싶어요" },
+  { value: "FULL", label: "전량 매도를 먼저 볼래요", description: "한 번에 정리하는 안부터 비교" },
+  { value: "STAGED", label: "나누어 매도를 먼저 볼래요", description: "두 번·세 번으로 나누는 안부터 비교" },
+  { value: "UNSURE", label: "둘 다 비교하고 싶어요", description: "정하지 않고 모든 안을 나란히 비교" },
 ];
 
 const ORDER_STYLE_OPTIONS: Array<{
   value: PositionCoachDraft["orderStylePreference"];
   label: string;
+  description: string;
 }> = [
-  { value: "FAST_EXECUTION", label: "빨리 거래하는 것이 중요해요" },
-  { value: "PRICE_CONTROL", label: "원하는 가격을 지키고 싶어요" },
-  { value: "UNSURE", label: "아직 잘 모르겠어요" },
+  { value: "FAST_EXECUTION", label: "빨리 거래하는 것이 중요해요", description: "가격이 달라질 수 있는 점도 함께 확인" },
+  { value: "PRICE_CONTROL", label: "원하는 가격을 지키고 싶어요", description: "거래가 끝나지 않을 수 있는 점도 함께 확인" },
+  { value: "UNSURE", label: "아직 잘 모르겠어요", description: "시장가와 지정가의 차이를 함께 비교" },
 ];
 
 const PLAN_LABELS: Record<PositionCoachPlanId, string> = {
@@ -90,9 +123,9 @@ const ORDER_STYLE_LABELS: Record<
   TradeCoachSuccess["orderStyle"]["preferredReviewStyle"],
   string
 > = {
-  MARKET_FIRST: "시장가를 먼저 비교해 보세요",
-  LIMIT_FIRST: "지정가를 먼저 비교해 보세요",
-  COMPARE_BOTH: "시장가와 지정가를 함께 비교해 보세요",
+  MARKET_FIRST: "시장가를 먼저 비교",
+  LIMIT_FIRST: "지정가를 먼저 비교",
+  COMPARE_BOTH: "시장가와 지정가를 함께 비교",
 };
 
 function formatKrw(value: number): string {
@@ -111,399 +144,502 @@ function formatPercent(value: number): string {
   })}%`;
 }
 
+function selectedLabel<T extends string>(
+  options: Array<{ value: T; label: string }>,
+  value: T,
+): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function reflectionForStep(
+  step: PositionCoachStep,
+  value: PositionCoachDraft,
+): string | null {
+  if (step === 1) return null;
+  if (step === 2) {
+    return `${formatWholeNumberInput(value.averageCostKrw) || "0"}원에 산 ${Number(value.holdingQuantity || 0).toLocaleString("ko-KR")}주를 기준으로 볼게요.`;
+  }
+  if (step === 3) {
+    return `${selectedLabel(HORIZON_OPTIONS, value.horizon)} 보유 계획이고, 결정은 ${DEADLINE_REFLECTIONS[value.deadline]} 상황으로 볼게요.`;
+  }
+  const profit = value.profitCriterionPercent.trim()
+    ? `, 이익 ${value.profitCriterionPercent}%에서도 다시 확인`
+    : "";
+  return `손실 ${value.maxLossPercent}%${profit}하는 기준으로 정리했어요.`;
+}
+
+function validateStep(
+  step: PositionCoachStep,
+  value: PositionCoachDraft,
+): string | null {
+  if (step === 1) {
+    if (!(Number(value.averageCostKrw) > 0)) return "평균 매수가를 입력해 주세요.";
+    if (!(Number(value.holdingQuantity) > 0) || !Number.isInteger(Number(value.holdingQuantity))) {
+      return "보유수량을 한 주 이상 입력해 주세요.";
+    }
+  }
+  if (step === 3) {
+    const loss = Number(value.maxLossPercent);
+    if (!(loss >= 0.5 && loss <= 50)) return "감당 범위는 0.5%에서 50% 사이로 입력해 주세요.";
+    if (value.profitCriterionPercent.trim()) {
+      const profit = Number(value.profitCriterionPercent);
+      if (!(profit >= 0.5 && profit <= 500)) return "이익 확인 기준은 0.5%에서 500% 사이로 입력해 주세요.";
+    }
+  }
+  return null;
+}
+
 function updateNumericField(
   event: React.ChangeEvent<HTMLInputElement>,
   field: PositionCoachDraftField,
   onChange: PositionCoachPanelProps["onChange"],
 ) {
-  onChange(field, event.currentTarget.value);
+  onChange(
+    field,
+    field === "averageCostKrw"
+      ? normalizeWholeNumberInput(event.currentTarget.value)
+      : event.currentTarget.value,
+  );
 }
 
 export function PositionCoachPanel({
   concern,
   value,
   result,
-  selectedPlanId,
   disabled = false,
   hideTimeAxis = false,
   errorMessage = null,
   onChange,
   onSubmit,
   onClose,
-  onSelectPlan,
   onTimeAxisAction,
 }: PositionCoachPanelProps) {
-  const activePlanId = selectedPlanId ?? result?.execution.preferredPlanId;
+  const [step, setStep] = useState<PositionCoachStep>(1);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const portalReady = useSyncExternalStore(
+    subscribeToClient,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const timeAxisDialogRef = useRef<HTMLElement>(null);
+  const dismissTimeAxisWithKeyboard = useEffectEvent(() => {
+    onTimeAxisAction?.("KEEP_CURRENT_CHART");
+  });
   const isAnxiousHolding = concern === "HOLDING_ANXIETY";
+  const showTimeAxis = Boolean(
+    result?.timeAxis.mismatchDetected && !hideTimeAxis,
+  );
   const lossReviewLineReached = Boolean(
     result?.position &&
       result.reviewLines.loss &&
       result.position.currentPriceKrw <= result.reviewLines.loss.reviewPriceKrw,
   );
 
-  return (
-    <section
-      className="position-coach-panel"
-      aria-labelledby="position-coach-title"
-    >
-      <header className="position-coach-panel__header">
-        {onClose ? (
-          <button
-            type="button"
-            className="position-coach-panel__close"
-            onClick={onClose}
-            aria-label="매매 동반자 닫기"
-          >
-            닫기
-          </button>
-        ) : null}
-        <p className="position-coach-panel__eyebrow">
-          {isAnxiousHolding ? "보유 후 불안 함께 보기" : "팔 시점 함께 보기"}
-        </p>
-        <h2 id="position-coach-title">
-          {isAnxiousHolding
-            ? "지금의 불안을 원래 계획과 맞춰볼게요"
-            : "전량과 분할 매도를 함께 비교해 볼게요"}
-        </h2>
-        <p>
-          입력한 평균 매수가와 감당 범위를 재확인 계획으로 바꿉니다. 미래
-          가격이나 정답을 예측하지 않습니다.
-        </p>
-      </header>
+  useEffect(() => {
+    if (!showTimeAxis) return;
+    const dialog = timeAxisDialogRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog?.focus();
 
-      <div className="position-coach-panel__form">
-        <label className="position-coach-panel__field">
-          <span>평균적으로 얼마에 샀나요?</span>
-          <span className="position-coach-panel__input-with-unit">
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              step="1"
-              value={value.averageCostKrw}
-              disabled={disabled}
-              onChange={(event) =>
-                updateNumericField(event, "averageCostKrw", onChange)
-              }
-              placeholder="예: 72,000"
-            />
-            <span aria-hidden="true">원</span>
-          </span>
-        </label>
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismissTimeAxisWithKeyboard();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
 
-        <label className="position-coach-panel__field">
-          <span>몇 주를 가지고 있나요?</span>
-          <span className="position-coach-panel__input-with-unit">
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              step="1"
-              value={value.holdingQuantity}
-              disabled={disabled}
-              onChange={(event) =>
-                updateNumericField(event, "holdingQuantity", onChange)
-              }
-              placeholder="예: 20"
-            />
-            <span aria-hidden="true">주</span>
-          </span>
-        </label>
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [showTimeAxis]);
 
-        <label className="position-coach-panel__field">
-          <span>얼마 동안 보유할 생각인가요?</span>
-          <select
-            value={value.horizon}
-            disabled={disabled}
-            onChange={(event) => onChange("horizon", event.currentTarget.value)}
-          >
-            {HORIZON_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+  function change(field: PositionCoachDraftField, nextValue: string) {
+    setLocalError(null);
+    onChange(field, nextValue);
+  }
 
-        <label className="position-coach-panel__field">
-          <span>언제까지 이 결정을 해야 하나요?</span>
-          <select
-            value={value.deadline}
-            disabled={disabled}
-            onChange={(event) => onChange("deadline", event.currentTarget.value)}
-          >
-            {DEADLINE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+  function goNext() {
+    const message = validateStep(step, value);
+    if (message) {
+      setLocalError(message);
+      return;
+    }
+    setLocalError(null);
+    if (step < 4) setStep((step + 1) as PositionCoachStep);
+  }
 
-        <label className="position-coach-panel__field">
-          <span>평균 매수가에서 몇 % 손실까지 감당할 수 있나요?</span>
-          <span className="position-coach-panel__input-with-unit">
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0.5"
-              max="50"
-              step="0.5"
-              value={value.maxLossPercent}
-              disabled={disabled}
-              onChange={(event) =>
-                updateNumericField(event, "maxLossPercent", onChange)
-              }
-              placeholder="예: 8"
-            />
-            <span aria-hidden="true">%</span>
-          </span>
-        </label>
+  function submit() {
+    const message = validateStep(step, value);
+    if (message) {
+      setLocalError(message);
+      return;
+    }
+    setLocalError(null);
+    onSubmit();
+  }
 
-        <label className="position-coach-panel__field">
-          <span>직접 정한 이익 실현 기준이 있나요? (선택)</span>
-          <span className="position-coach-panel__input-with-unit">
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0.5"
-              max="500"
-              step="0.5"
-              value={value.profitCriterionPercent}
-              disabled={disabled}
-              onChange={(event) =>
-                updateNumericField(event, "profitCriterionPercent", onChange)
-              }
-              placeholder="없으면 비워 두세요"
-            />
-            <span aria-hidden="true">%</span>
-          </span>
-        </label>
-
-        <fieldset className="position-coach-panel__choice-group">
-          <legend>전량 매도와 나누어 매도 중 어떤 쪽을 먼저 볼까요?</legend>
-          <div className="position-coach-panel__choices">
-            {SELL_PREFERENCE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={value.sellPlanPreference === option.value}
-                disabled={disabled}
-                onClick={() => onChange("sellPlanPreference", option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className="position-coach-panel__choice-group">
-          <legend>주문할 때 무엇이 더 중요한가요?</legend>
-          <div className="position-coach-panel__choices">
-            {ORDER_STYLE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={value.orderStylePreference === option.value}
-                disabled={disabled}
-                onClick={() => onChange("orderStylePreference", option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <button
-          className="position-coach-panel__submit"
-          type="button"
-          disabled={disabled}
-          onClick={onSubmit}
-        >
-          {disabled
-            ? "계획을 계산하고 있어요"
-            : isAnxiousHolding
-              ? "내 재확인 계획 만들기"
-              : "매도 선택지 비교하기"}
-        </button>
-        {errorMessage ? (
-          <p className="position-coach-panel__error" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
-      </div>
-
-      {result ? (
-        <div className="position-coach-panel__result" aria-live="polite">
-          {result.position ? (
-            <section
-              className="position-coach-panel__position"
-              data-direction={result.position.direction.toLowerCase()}
-              aria-labelledby="position-evaluation-title"
-            >
-              <div>
-                <p>현재 평가손익</p>
-                <h3 id="position-evaluation-title">
-                  <span aria-hidden="true">
-                    {result.position.direction === "GAIN"
-                      ? "▲"
-                      : result.position.direction === "LOSS"
-                        ? "▼"
-                        : "―"}
-                  </span>{" "}
-                  {formatSignedKrw(result.position.profitLossAmountKrw)} ·{" "}
-                  {formatPercent(result.position.profitLossPercent)}
-                </h3>
-              </div>
-              <dl>
-                <div>
-                  <dt>입력한 평균 매수가</dt>
-                  <dd>{formatKrw(result.position.referenceAverageCostKrw)}</dd>
-                </div>
-                <div>
-                  <dt>공개 데이터 기준 가격</dt>
-                  <dd>{formatKrw(result.position.currentPriceKrw)}</dd>
-                </div>
-                <div>
-                  <dt>현재 평가금액</dt>
-                  <dd>{formatKrw(result.position.currentValuationKrw)}</dd>
-                </div>
-              </dl>
-              <p>{result.position.meaning}</p>
-            </section>
-          ) : null}
-
+  const timeAxisModal = showTimeAxis && result && portalReady
+    ? createPortal(
+        <div className="position-coach-panel__time-axis-overlay">
+          <div className="position-coach-panel__time-axis-backdrop" aria-hidden="true" />
           <section
-            className="position-coach-panel__review-lines"
-            aria-labelledby="review-line-title"
+            ref={timeAxisDialogRef}
+            className="position-coach-panel__time-axis"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="time-axis-title"
+            aria-describedby="time-axis-description"
+            tabIndex={-1}
           >
-            <h3 id="review-line-title">계획을 다시 확인할 선</h3>
-            {result.reviewLines.loss ? (
-              <article>
-                <p>감당 가능한 손실 기준</p>
-                <strong>
-                  {formatKrw(result.reviewLines.loss.reviewPriceKrw)} · 평가손익{" "}
-                  {formatSignedKrw(
-                    result.reviewLines.loss.profitLossAmountAtReviewKrw,
-                  )}
-                </strong>
-                <small>{result.reviewLines.loss.meaning}</small>
-              </article>
-            ) : null}
-            {lossReviewLineReached ? (
-              <p className="position-coach-panel__line-alert" role="note">
-                현재 공개 가격이 내가 정한 손실 재확인선을 이미 지났습니다. 새 결론을 서두르기보다 원래 보유 이유와 감당 범위를 먼저 다시 확인해 주세요.
-              </p>
-            ) : null}
-            {result.reviewLines.profit ? (
-              <article>
-                <p>직접 정한 이익 실현 기준</p>
-                <strong>
-                  {formatKrw(result.reviewLines.profit.reviewPriceKrw)} · 평가손익{" "}
-                  {formatSignedKrw(
-                    result.reviewLines.profit.profitLossAmountAtReviewKrw,
-                  )}
-                </strong>
-                <small>{result.reviewLines.profit.meaning}</small>
-              </article>
-            ) : null}
-          </section>
-
-          <section
-            className="position-coach-panel__plans"
-            aria-labelledby="sell-plan-title"
-          >
-            <header>
-              <div>
-                <p>전량과 분할 비교</p>
-                <h3 id="sell-plan-title">
-                  먼저 볼 선택: {PLAN_LABELS[result.execution.preferredPlanId]}
-                </h3>
-              </div>
-              <p>{result.execution.explanation}</p>
-            </header>
-            <div className="position-coach-panel__plan-list">
-              {result.execution.core.plans.map((plan) => (
+            <div className="position-coach-panel__time-axis-identity">
+              <span className="agent-ai-badge" aria-hidden="true">AI</span>
+              <span>
+                <strong>차트 보는 시간을 확인했어요</strong>
+                <small>현재 선택한 차트와 보유 계획 비교</small>
+              </span>
+            </div>
+            <span className="position-coach-panel__time-axis-eyebrow">분 단위 차트를 보고 있어요</span>
+            <h2 id="time-axis-title">원래 계획보다 아주 짧은 움직임을 보고 있어요</h2>
+            <p id="time-axis-description">{result.timeAxis.observation}</p>
+            <div className="position-coach-panel__time-axis-actions">
+              {result.timeAxis.actions.map((action) => (
                 <button
-                  key={plan.id}
+                  key={action.key}
                   type="button"
-                  aria-pressed={activePlanId === plan.id}
-                  disabled={disabled || !onSelectPlan}
-                  onClick={() => onSelectPlan?.(plan.id)}
+                  disabled={disabled || !onTimeAxisAction}
+                  onClick={() => onTimeAxisAction?.(action.key)}
                 >
-                  <span>{PLAN_LABELS[plan.id]}</span>
-                  <strong>
-                    총 {plan.totalShares.toLocaleString("ko-KR")}주 · 기준금액{" "}
-                    {formatKrw(plan.referenceTotalAmountKrw)}
-                  </strong>
-                  <small>
-                    {plan.allocations
-                      .map(
-                        (allocation) =>
-                          `${allocation.sequence}회 ${allocation.shares.toLocaleString("ko-KR")}주`,
-                      )
-                      .join(" · ")}
-                  </small>
+                  {action.label}
                 </button>
               ))}
             </div>
+            <small>{result.timeAxis.limitation}</small>
           </section>
+        </div>,
+        document.body,
+      )
+    : null;
 
-          <section
-            className="position-coach-panel__order-style"
-            aria-labelledby="order-style-title"
-          >
-            <p>주문 방식 코치</p>
-            <h3 id="order-style-title">
-              {
-                ORDER_STYLE_LABELS[
-                  result.orderStyle.preferredReviewStyle
-                ]
-              }
-            </h3>
-            <p>{result.orderStyle.rationale}</p>
-            <div>
-              <article>
-                <strong>시장가</strong>
-                <span>{result.orderStyle.marketOrder.benefit}</span>
-                <small>{result.orderStyle.marketOrder.tradeoff}</small>
-              </article>
-              <article>
-                <strong>지정가</strong>
-                <span>{result.orderStyle.limitOrder.benefit}</span>
-                <small>{result.orderStyle.limitOrder.tradeoff}</small>
-              </article>
-            </div>
-            <p className="position-coach-panel__order-book-limit">
-              실시간 호가 미확인 · {result.orderStyle.limitation}
-            </p>
-          </section>
-
-          {result.timeAxis.mismatchDetected && !hideTimeAxis ? (
-            <section
-              className="position-coach-panel__time-axis"
-              aria-labelledby="time-axis-title"
+  return (
+    <>
+      <section
+        className="position-coach-panel position-coach-panel--stepper"
+        aria-labelledby="position-coach-title"
+      >
+        <header className="position-coach-panel__header">
+          {onClose ? (
+            <button
+              type="button"
+              className="position-coach-panel__close"
+              onClick={onClose}
+              aria-label="매매 동반자 닫기"
             >
-              <p>차트를 보는 시간과 계획이 달라요</p>
-              <h3 id="time-axis-title">짧은 움직임이 더 크게 느껴질 수 있어요</h3>
-              <p>{result.timeAxis.observation}</p>
-              <div>
-                {result.timeAxis.actions.map((action) => (
-                  <button
-                    key={action.key}
-                    type="button"
-                    disabled={disabled || !onTimeAxisAction}
-                    onClick={() => onTimeAxisAction?.(action.key)}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-              <small>{result.timeAxis.limitation}</small>
-            </section>
+              닫기
+            </button>
           ) : null}
+          <div className="position-coach-panel__identity">
+            <span className="agent-ai-badge" aria-hidden="true">AI</span>
+            <span>
+              <strong>AI 매매 동반자</strong>
+              <small>{step}단계 · {STEP_LABELS[step]}</small>
+            </span>
+          </div>
+          <h2 id="position-coach-title">
+            {isAnxiousHolding
+              ? "보유 중인 고민을 한 단계씩 정리할게요"
+              : "파는 방법을 한 단계씩 비교할게요"}
+          </h2>
+        </header>
+
+        <div className="position-coach-panel__progress-wrap">
+          <div><span>{step} / 4</span><strong>{STEP_LABELS[step]}</strong></div>
+          <div className="position-coach-panel__progress" aria-label={`전체 4단계 중 ${step}단계`}>
+            {[1, 2, 3, 4].map((item) => (
+              <span key={item} className={item <= step ? "is-active" : undefined} />
+            ))}
+          </div>
         </div>
-      ) : null}
-    </section>
+
+        {reflectionForStep(step, value) ? (
+          <div className="position-coach-panel__latest" role="status" aria-live="polite">
+            <span>방금 답변을 이렇게 이해했어요</span>
+            <p>{reflectionForStep(step, value)}</p>
+          </div>
+        ) : null}
+
+        <div className="position-coach-panel__form position-coach-panel__form--single-step">
+          <section className="position-coach-panel__step-card">
+            <span>{STEP_LABELS[step]}</span>
+            <h3>
+              {step === 1
+                ? "지금 가지고 있는 주식 정보를 알려주세요"
+                : step === 2
+                  ? "원래 계획한 시간은 어느 정도인가요?"
+                  : step === 3
+                    ? "어느 범위에서 계획을 다시 확인할까요?"
+                    : "어떤 실행 방법부터 비교할까요?"}
+            </h3>
+
+            {step === 1 ? (
+              <div className="position-coach-panel__field-grid">
+                <label className="position-coach-panel__field">
+                  <span>평균적으로 얼마에 샀나요?</span>
+                  <span className="position-coach-panel__input-with-unit">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatWholeNumberInput(value.averageCostKrw)}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateNumericField(event, "averageCostKrw", change)
+                      }
+                      placeholder="예: 72,000"
+                    />
+                    <span aria-hidden="true">원</span>
+                  </span>
+                </label>
+                <label className="position-coach-panel__field">
+                  <span>몇 주를 가지고 있나요?</span>
+                  <span className="position-coach-panel__input-with-unit">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      value={value.holdingQuantity}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateNumericField(event, "holdingQuantity", change)
+                      }
+                      placeholder="예: 20"
+                    />
+                    <span aria-hidden="true">주</span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className="position-coach-panel__step-groups">
+                <fieldset className="position-coach-panel__choice-group">
+                  <legend>얼마 동안 보유할 생각인가요?</legend>
+                  <div className="position-coach-panel__choices position-coach-panel__choices--grid">
+                    {HORIZON_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={value.horizon === option.value}
+                        disabled={disabled}
+                        onClick={() => change("horizon", option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="position-coach-panel__choice-group">
+                  <legend>언제까지 이 결정을 해야 하나요?</legend>
+                  <div className="position-coach-panel__choices position-coach-panel__choices--grid">
+                    {DEADLINE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={value.deadline === option.value}
+                        disabled={disabled}
+                        onClick={() => change("deadline", option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            ) : null}
+
+            {step === 3 ? (
+              <div className="position-coach-panel__field-grid">
+                <label className="position-coach-panel__field">
+                  <span>평균 매수가에서 몇 % 손실까지 감당할 수 있나요?</span>
+                  <span className="position-coach-panel__input-with-unit">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0.5"
+                      max="50"
+                      step="0.5"
+                      value={value.maxLossPercent}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateNumericField(event, "maxLossPercent", change)
+                      }
+                      placeholder="예: 8"
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                </label>
+                <label className="position-coach-panel__field">
+                  <span>직접 정한 이익 확인 기준이 있나요? (선택)</span>
+                  <span className="position-coach-panel__input-with-unit">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0.5"
+                      max="500"
+                      step="0.5"
+                      value={value.profitCriterionPercent}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        updateNumericField(event, "profitCriterionPercent", change)
+                      }
+                      placeholder="없으면 비워 두세요"
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
+
+            {step === 4 ? (
+              <div className="position-coach-panel__step-groups">
+                <fieldset className="position-coach-panel__choice-group">
+                  <legend>전량 매도와 나누어 매도 중 어떤 쪽을 먼저 볼까요?</legend>
+                  <div className="position-coach-panel__choices position-coach-panel__choices--cards">
+                    {SELL_PREFERENCE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={value.sellPlanPreference === option.value}
+                        disabled={disabled}
+                        onClick={() => change("sellPlanPreference", option.value)}
+                      >
+                        <strong>{option.label}</strong>
+                        <span>{option.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="position-coach-panel__choice-group">
+                  <legend>주문할 때 무엇이 더 중요한가요?</legend>
+                  <div className="position-coach-panel__choices position-coach-panel__choices--cards">
+                    {ORDER_STYLE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={value.orderStylePreference === option.value}
+                        disabled={disabled}
+                        onClick={() => change("orderStylePreference", option.value)}
+                      >
+                        <strong>{option.label}</strong>
+                        <span>{option.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            ) : null}
+          </section>
+
+          {localError || errorMessage ? (
+            <p className="position-coach-panel__error" role="alert">
+              {localError ?? errorMessage}
+            </p>
+          ) : null}
+
+          <div className="position-coach-panel__actions">
+            {step > 1 ? (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                disabled={disabled}
+                onClick={() => {
+                  setLocalError(null);
+                  setStep((step - 1) as PositionCoachStep);
+                }}
+              >
+                이전 단계
+              </button>
+            ) : null}
+            <button
+              className="position-coach-panel__submit btn btn--primary"
+              type="button"
+              disabled={disabled}
+              onClick={step === 4 ? submit : goNext}
+            >
+              {disabled
+                ? "계획을 계산하고 있어요"
+                : step < 4
+                  ? "다음 질문"
+                  : isAnxiousHolding
+                    ? "내 계획 다시 확인하기"
+                    : "매도 선택지 비교하기"}
+            </button>
+          </div>
+        </div>
+
+        {result && step === 4 ? (
+          <section className="position-coach-panel__compact-result" aria-live="polite">
+            <header>
+              <span>계획 계산을 마쳤어요</span>
+              <h3>먼저 볼 선택: {PLAN_LABELS[result.execution.preferredPlanId]}</h3>
+            </header>
+            {result.position ? (
+              <dl>
+                <div>
+                  <dt>현재 손익</dt>
+                  <dd>{formatSignedKrw(result.position.profitLossAmountKrw)} · {formatPercent(result.position.profitLossPercent)}</dd>
+                </div>
+                {result.reviewLines.loss ? (
+                  <div>
+                    <dt>손실 기준을 다시 볼 가격</dt>
+                    <dd>{formatKrw(result.reviewLines.loss.reviewPriceKrw)} · {formatSignedKrw(result.reviewLines.loss.profitLossAmountAtReviewKrw)}</dd>
+                  </div>
+                ) : null}
+                {result.reviewLines.profit ? (
+                  <div>
+                    <dt>이익 기준을 다시 볼 가격</dt>
+                    <dd>{formatKrw(result.reviewLines.profit.reviewPriceKrw)} · {formatSignedKrw(result.reviewLines.profit.profitLossAmountAtReviewKrw)}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>주문 방식</dt>
+                  <dd>{ORDER_STYLE_LABELS[result.orderStyle.preferredReviewStyle]}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {lossReviewLineReached ? (
+              <p className="position-coach-panel__line-alert" role="note">
+                현재 공개 가격이 내가 정한 손실 기준을 이미 지났습니다. 원래 보유 이유와 감당 범위를 먼저 다시 확인해 주세요.
+              </p>
+            ) : null}
+            <button type="button" onClick={() => setStep(1)}>이전 답변 수정하기</button>
+          </section>
+        ) : null}
+      </section>
+      {timeAxisModal}
+    </>
   );
 }

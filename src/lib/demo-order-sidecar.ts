@@ -81,7 +81,7 @@ export function prepareDemoOrderSidecar(
               : "시장가와 지정가의 차이를 함께 비교한 뒤 선택합니다.",
         orderBookStatus: "NO_ORDER_BOOK" as const,
         limitation:
-          "실시간 호가를 확인하지 않아 최적 지정가·예상 가격 차이·체결 가능성을 계산하지 않습니다.",
+          "지금 시장의 주문 가격과 대기 물량을 확인하지 않아 가장 알맞은 지정가·실제 가격 차이·거래 완료 가능성을 계산하지 않습니다.",
       }
     : undefined;
   return DemoOrderSidecarSchema.parse({

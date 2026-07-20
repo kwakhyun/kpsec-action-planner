@@ -105,7 +105,7 @@ function fixedExplanation(decision: ExecutionCoreSuccess): AgentDecisionExplanat
       "다음 확인 전 가격이 움직이면 계획한 수량을 모두 검토하지 못할 수 있습니다.",
     priorityPlanId: decision.preferredPlanId,
     priorityReason:
-      "기회를 놓치는 후회를 더 크게 답했기 때문에 일괄안을 먼저 비교 대상으로 둡니다. 최근 변동 범위와 감당 범위가 달라지면 분할 비중과 재확인선도 함께 달라집니다.",
+      "기다리는 동안 가격이 올라 기회를 놓치는 상황을 더 걱정한다고 답했습니다. 그래서 한 번에 확인하는 방법을 먼저 보여드립니다. 최근 가격 움직임이나 감당 범위가 달라지면 계획도 다시 계산합니다.",
     nextQuestionKey: "NONE",
   };
 }
