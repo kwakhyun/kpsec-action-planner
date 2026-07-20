@@ -53,7 +53,11 @@ const CommonCoachInputFields = {
     .regex(/^[A-Z0-9.^=-]+$/),
   deadline: ExecutionDeadlineSchema,
   horizon: HoldingHorizonSchema,
-  maxLossPercent: z.number().finite().min(0.5).max(50),
+  maxLossPercent: z
+    .number()
+    .finite("감당 범위를 숫자로 입력해 주세요.")
+    .min(0.5, "감당 범위는 0.5% 이상으로 입력해 주세요.")
+    .max(50, "감당 범위는 50% 이하로 입력해 주세요."),
   regretPriority: TradeRegretPrioritySchema,
   orderStylePreference: OrderStylePreferenceSchema,
   selectedChartInterval: ChartObservationIntervalSchema,

@@ -29,7 +29,11 @@ export const DecisionConversationInputSchema = z
     holdingQuantity: z.number().finite().int().positive().max(100_000_000).nullable(),
     deadline: DecisionDeadlineSchema,
     regretPriority: RegretPrioritySchema,
-    maxAdverseMovePct: z.number().finite().min(0.5).max(30),
+    maxAdverseMovePct: z
+      .number()
+      .finite("감당 범위를 숫자로 입력해 주세요.")
+      .min(0.5, "감당 범위는 0.5% 이상으로 입력해 주세요.")
+      .max(50, "감당 범위는 50% 이하로 입력해 주세요."),
   })
   .superRefine((input, context) => {
     if (input.intent === "BUY" && input.budgetKrw === null) {

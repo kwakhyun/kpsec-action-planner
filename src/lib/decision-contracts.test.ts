@@ -66,3 +66,29 @@ test("SELL exposure requires a holding quantity and excludes a budget", () => {
   assert.deepEqual(missingHolding.error.issues[0].path, ["holdingQuantity"]);
   assert.deepEqual(crossedExposure.error.issues[0].path, ["budgetKrw"]);
 });
+
+test("감당 범위 50%는 허용하고 초과값은 한국어로 안내한다", () => {
+  const accepted = DecisionConversationInputSchema.safeParse({
+    ...SHARED_INPUT,
+    intent: "SELL",
+    budgetKrw: null,
+    holdingQuantity: 125,
+    maxAdverseMovePct: 50,
+  });
+  const rejected = DecisionConversationInputSchema.safeParse({
+    ...SHARED_INPUT,
+    intent: "SELL",
+    budgetKrw: null,
+    holdingQuantity: 125,
+    maxAdverseMovePct: 50.5,
+  });
+
+  assert.equal(accepted.success, true);
+  assert.equal(rejected.success, false);
+  if (rejected.success) return;
+  assert.equal(
+    rejected.error.issues[0]?.message,
+    "감당 범위는 50% 이하로 입력해 주세요.",
+  );
+  assert.doesNotMatch(rejected.error.issues[0]?.message ?? "", /Too big|expected/);
+});

@@ -80,6 +80,35 @@ test("보유 후 평가손익과 사용자 손실·이익 재확인선을 결정
   assert.equal(result.reviewLines.profit?.profitLossAmountAtReviewKrw, 1_000_000);
 });
 
+test("감당 범위 50%를 가격과 금액 재확인선으로 계산한다", () => {
+  const result = calculateTradeCoach({
+    ...POSITION_INPUT,
+    maxLossPercent: 50,
+  });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.reviewLines.loss?.reviewPriceKrw, 50_000);
+  assert.equal(result.reviewLines.loss?.positionValueAtReviewKrw, 5_000_000);
+  assert.equal(result.reviewLines.loss?.profitLossAmountAtReviewKrw, -5_000_000);
+});
+
+test("감당 범위 초과 입력은 원시 Zod 문구 없이 안내한다", () => {
+  const result = calculateTradeCoach({
+    ...POSITION_INPUT,
+    maxLossPercent: 50.5,
+  });
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+
+  assert.equal(result.failureCode, "INVALID_INPUT");
+  assert.equal(
+    result.reasons[0]?.message,
+    "감당 범위는 50% 이하로 입력해 주세요.",
+  );
+  assert.doesNotMatch(result.reasons[0]?.message ?? "", /Too big|expected/);
+});
+
 test("전량·두 번·세 번 비교가 수량을 보존하고 사용자 분할 선호를 반영한다", () => {
   const result = calculateTradeCoach(POSITION_INPUT);
   assert.equal(result.ok, true);

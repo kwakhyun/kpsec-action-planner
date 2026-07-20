@@ -16,8 +16,10 @@ import {
   buildAdversarialReviewPrompt,
 } from "@/lib/adversarial-review-prompt";
 
-const REQUEST_TIMEOUT_MS = 18_000;
-const MAX_OUTPUT_TOKENS = 1_100;
+const REQUEST_TIMEOUT_MS = 30_000;
+// Reasoning tokens count against this budget and can exhaust a small limit
+// before any Structured Output is visible.
+const MAX_OUTPUT_TOKENS = 8_000;
 
 let clientCache:
   | {
@@ -187,6 +189,19 @@ export function validateParsedAdversarialResponse(
   return validateAdversarialReview(response.outputParsed, request);
 }
 
+function safeIncompleteReason(value: unknown): string {
+  if (
+    value &&
+    typeof value === "object" &&
+    "reason" in value &&
+    typeof value.reason === "string" &&
+    /^[a-z_]{1,80}$/.test(value.reason)
+  ) {
+    return value.reason;
+  }
+  return "unknown";
+}
+
 export async function generateAdversarialReview(
   rawRequest: AdversarialReviewRequest,
 ): Promise<{ result: AdversarialReviewResult; model: string }> {
@@ -225,6 +240,13 @@ export async function generateAdversarialReview(
     );
   } catch (error: unknown) {
     throw normalizeAdversarialError(error, model);
+  }
+
+  if (response.status === "incomplete") {
+    console.warn("[adversarial-review] incomplete response", {
+      reason: safeIncompleteReason(response.incomplete_details),
+      model: response.model,
+    });
   }
 
   try {

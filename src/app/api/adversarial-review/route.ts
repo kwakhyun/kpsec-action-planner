@@ -132,6 +132,10 @@ export async function POST(request: Request) {
       error instanceof AdversarialReviewGenerationError
         ? error
         : new AdversarialReviewGenerationError("UPSTREAM_ERROR");
+    console.warn("[adversarial-review] generation failed", {
+      failureCode: normalized.code,
+      model: normalized.requestedModel,
+    });
     envelope = pausedEnvelope({
       request: parsed.data,
       code: normalized.code,

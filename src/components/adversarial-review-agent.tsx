@@ -113,7 +113,7 @@ function AdversarialReviewSession({
     abortRef.current = controller;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-    const timeoutId = window.setTimeout(() => controller.abort(), 22_000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 35_000);
 
     try {
       const response = await fetch("/api/adversarial-review", {
