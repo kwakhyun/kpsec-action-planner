@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/noto-sans-kr";
 import "./globals.css";
+import "./production-ui.css";
 
 export const metadata: Metadata = {
-  title: "카카오페이증권 데모 | 가이드형 매매 동반자",
+  title: "Action Planner | 매매 실행 의사결정 동반자",
   description:
-    "Yahoo Finance 공개 데이터와 후회 예산을 바탕으로 일괄안과 분할안을 비교하는 해커톤 데모입니다. 실제 주문은 제공하지 않습니다.",
+    "공개 시장 데이터와 내가 정한 조건을 바탕으로 일괄안과 분할안을 비교하는 매매 실행 의사결정 데모입니다. 실제 주문은 제공하지 않습니다.",
 };
 
 export default function RootLayout({

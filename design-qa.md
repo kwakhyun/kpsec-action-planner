@@ -68,6 +68,104 @@ Findings:
 
 final result: blocked
 
+## Planning Studio image-to-code QA — 2026-08-29
+
+### Scope and evidence
+
+- Source design: `/Users/kwakhyun/.codex/generated_images/01a0491e-ec4f-7c82-8d90-f21e685ce131/exec-79d30cfc-6033-43d0-aa6c-085c9482e6c6.png`
+- Implementation: `/Users/kwakhyun/Documents/kpsec-action-planner/src/components/security-trading-demo.tsx`, `/Users/kwakhyun/Documents/kpsec-action-planner/src/app/production-ui.css`
+- Full-page implementation capture: `/private/tmp/kpsec-production-audit/24-studio-main-final.png`
+- Full comparison: `/private/tmp/kpsec-production-audit/25-studio-final-comparison.png`
+- Focused decision comparison: `/private/tmp/kpsec-production-audit/26-studio-focused-comparison.png`
+- Desktop viewport: `1440 × 1024`
+- Mobile viewport: `390 × 844`
+- Comparison density: full-page hierarchy plus focused decision-canvas detail
+
+### Full-page comparison
+
+- The implementation follows the selected concept's three-stage journey, asymmetric evidence-and-decision workspace, three selectable decision rows, cobalt active state and persistent primary action.
+- The left evidence pane preserves the product's real quote, chart and market metrics instead of replacing them with decorative sample content.
+- The larger editorial decision headline and stronger stock-price hierarchy borrow the most useful qualities from the first concept. Cobalt data accents and compact chart treatment borrow the precision of the second concept.
+- Utility icons shown only as decoration in the source concept were intentionally omitted because the product has no matching actions.
+
+### Focused comparison and iteration history
+
+1. First pass — the concern reset left no option selected, the footer and lower metrics fell below the desktop viewport, and the chart toolbar was too dense. The default concern was restored, the decision footer was anchored, secondary moving-average controls were removed from the primary surface, and the chart was compacted.
+2. Mobile pass — evidence appeared before the main decision and pushed the task below the fold. The mobile layout now leads with a compact quote summary and the decision canvas, followed by supporting evidence.
+3. Mobile agent pass — the input panel title produced a one-character orphan. The heading was tightened and the bottom sheet spacing was refined.
+4. Final desktop pass — chart height was reduced while retaining all supported time units, putting the quote, chart, three key metrics and source in one 1024px viewport.
+
+### Interaction and responsive checks
+
+- Concern selection, journey-stage transition, guided input steps, result generation and execution-plan selection passed.
+- The guided agent opens as a focused desktop panel and a mobile bottom sheet with a backdrop.
+- At `390px`, measured document width equals viewport width and horizontal overflow is `0`.
+- Keyboard focus styles, native form labels, reduced-motion handling and mobile target sizes are retained.
+- Browser console warnings and errors: none.
+
+### Findings
+
+- P0/P1/P2: no open findings.
+- P3: the source concept uses smaller headings and extra utility actions. The implementation intentionally favors clearer novice-facing hierarchy and does not invent unsupported actions.
+
+### Verification
+
+- ESLint passed.
+- TypeScript passed.
+- 93 unit tests passed.
+- Next.js production build passed.
+
+final result: passed
+
+## Production UI/UX upgrade audit — 2026-08-29
+
+### Audit scope
+
+- Surface: Action Planner의 단일 종목 화면, 가이드 입력, 실행안 비교 결과
+- User goal: 초보 사용자가 공개 시장 정보를 확인하고 현재 고민을 선택한 뒤, 실행 방법을 비교하고 필요하면 입력 조건을 다시 고치는 흐름
+- Accessibility target: 390px 반응형 재배치, 키보드 초점, 명확한 상태 전환, 가로 넘침 방지
+
+### Evidence
+
+- Before, first screen: `/private/tmp/kpsec-production-audit/01-current-main-viewport.jpg`
+- After, first screen: `/private/tmp/kpsec-production-audit/05-production-main.jpg`
+- First-screen comparison: `/private/tmp/kpsec-production-audit/10-main-comparison.jpg`
+- Before, plan result: `/private/tmp/kpsec-production-audit/03-plan-result.jpg`
+- After, plan result: `/private/tmp/kpsec-production-audit/07-production-plan-result.jpg`
+- Result comparison: `/private/tmp/kpsec-production-audit/11-result-comparison.jpg`
+- After, mobile first screen: `/private/tmp/kpsec-production-audit/08-production-mobile-main.jpg`
+- After, mobile input panel: `/private/tmp/kpsec-production-audit/09-production-mobile-agent.jpg`
+
+### Flow health
+
+1. Entry and concern selection — passed. The three concern choices now appear immediately after the price summary and each explains the next outcome. The former chart-first layout made the main action easy to miss on smaller screens.
+2. Guided input — passed. The stepper, latest answer, current question, quick choices and primary action remain in one focused rail on desktop and one bottom sheet on mobile.
+3. Plan result — passed. The stale fifth-step form is replaced by a completion summary that follows the currently selected plan and provides direct routes to continue comparing or edit the original conditions.
+4. Responsive reflow — passed. At 390px the quote card uses the full viewport, metrics form a two-by-two grid, choices stack vertically, and measured horizontal overflow is zero.
+
+### Highest-impact changes
+
+- Reworked product branding, metadata, top bar, surface hierarchy and spacing into a single production styling layer loaded after the legacy styles.
+- Promoted the user decision entry above the chart so the primary task is visible without a long scroll.
+- Converted quote metrics into distinct scan-friendly tiles and strengthened numeric hierarchy without changing market semantics.
+- Added a plan-ready rail that removes the mismatch between a completed result and an active input form.
+- Added a keyboard skip link, stronger focus treatment, reduced-motion handling and 44px or larger primary targets.
+
+### Evidence limits
+
+- Screenshot review confirms visible layout, hierarchy and state changes but does not establish full WCAG conformance or screen-reader behavior.
+- The in-app browser validated desktop and mobile flows with live public data. A separate Playwright CLI run was not used because this design workflow keeps verification on the selected in-app browser surface.
+
+### Verification
+
+- 93 unit tests passed.
+- TypeScript passed.
+- ESLint passed.
+- Next.js production build passed.
+- Browser flow passed for start, guided input, plan completion, plan selection sync, condition editing and 390px reflow.
+
+final result: passed
+
 ## Beginner terminology and minute-chart guidance audit
 
 - Captured evidence:
@@ -120,3 +218,9 @@ final result: blocked
 - Post-fix browser capture: still required because local-URL browser capture remains blocked.
 
 final result: blocked
+
+## Current production certification — 2026-08-29
+
+The Planning Studio image-to-code audit above is the current full-surface result. Historical component audits remain in this file for traceability; their earlier screenshot blockers do not apply to the redesigned surface, which was rechecked in the in-app browser at desktop and mobile sizes.
+
+final result: passed

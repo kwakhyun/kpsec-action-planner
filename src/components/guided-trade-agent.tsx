@@ -147,7 +147,7 @@ export function GuidedTradeAgent({
               <small>{loading ? "설명 확인 중" : `${step}단계 · ${STEP_LABELS[step]}`}</small>
             </span>
           </div>
-          <h2 id="guided-agent-title">한 번에 하나씩 같이 정리할게요</h2>
+          <h2 id="guided-agent-title">하나씩 같이 정리할게요</h2>
         </div>
         <button type="button" onClick={onClose} aria-label="가이드 닫기">
           닫기

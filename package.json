@@ -14,6 +14,8 @@
     "smoke:adversarial-live": "tsx scripts/adversarial-live-smoke.ts"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-kr": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
     "next": "16.2.10",
     "openai": "6.48.0",
     "react": "19.2.7",

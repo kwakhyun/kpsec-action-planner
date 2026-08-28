@@ -111,15 +111,15 @@ type ChartPoint = SecurityCandleBar & {
 const CHART_UNITS = ["MINUTE", "DAY", "WEEK", "MONTH", "YEAR"] as const;
 
 const MA_COLORS: Record<MovingAverageWindow, string> = {
-  5: "#e38100",
-  20: "#7b5bd6",
-  60: "#0b8f83",
+  5: "#f79009",
+  20: "#155eef",
+  60: "#0e9384",
 };
 
 const MARKER_COLORS = {
-  primary: "#dfaa00",
-  warning: "#e04444",
-  muted: "#777777",
+  primary: "#155eef",
+  warning: "#dc6803",
+  muted: "#667085",
 } as const;
 
 function normalizeBars(
@@ -281,7 +281,7 @@ function CandlestickShape(props: BarShapeProps) {
   const closeY = yForPrice(point.close);
   const isUp = point.close > point.open;
   const isDown = point.close < point.open;
-  const color = isUp ? "#e04444" : isDown ? "#2d64c8" : "#8a8a8a";
+  const color = isUp ? "#d92d45" : isDown ? "#175cd3" : "#98a2b3";
   const center = props.x + props.width / 2;
   const bodyWidth = Math.max(Math.min(props.width * 0.7, 10), 2);
   const bodyTop = Math.min(openY, closeY);
@@ -669,7 +669,7 @@ export const SecurityCandlestickChart = forwardRef<
             >
               <CartesianGrid
                 vertical={false}
-                stroke="#ededed"
+                stroke="#e4e7ec"
                 strokeDasharray="3 5"
               />
               <XAxis
@@ -680,7 +680,7 @@ export const SecurityCandlestickChart = forwardRef<
                 tickLine={false}
                 axisLine={false}
                 minTickGap={isIntraday ? 42 : 34}
-                tick={{ fill: "#858585", fontSize: 11 }}
+                tick={{ fill: "#98a2b3", fontSize: 10 }}
               />
               <YAxis
                 yAxisId="price"
@@ -690,7 +690,7 @@ export const SecurityCandlestickChart = forwardRef<
                 tickLine={false}
                 axisLine={false}
                 width={62}
-                tick={{ fill: "#858585", fontSize: 11 }}
+                tick={{ fill: "#98a2b3", fontSize: 10 }}
               />
               <YAxis
                 yAxisId="volume"
@@ -698,7 +698,7 @@ export const SecurityCandlestickChart = forwardRef<
                 hide
               />
               <Tooltip
-                cursor={{ stroke: "#adadad", strokeDasharray: "4 4" }}
+                cursor={{ stroke: "#98a2b3", strokeDasharray: "4 4" }}
                 content={(props) => (
                   <CandleTooltip
                     active={props.active}
@@ -721,7 +721,7 @@ export const SecurityCandlestickChart = forwardRef<
                 {visibleBars.map((bar) => (
                   <Cell
                     key={`volume-${bar.timestamp}`}
-                    fill={bar.close >= bar.open ? "#e04444" : "#2d64c8"}
+                    fill={bar.close >= bar.open ? "#d92d45" : "#175cd3"}
                     fillOpacity={0.2}
                   />
                 ))}
@@ -732,9 +732,9 @@ export const SecurityCandlestickChart = forwardRef<
                   yAxisId="price"
                   y1={planOverlay.reviewBand.low}
                   y2={planOverlay.reviewBand.high}
-                  fill="#f2c400"
+                  fill="#155eef"
                   fillOpacity={0.1}
-                  stroke="#d2a900"
+                  stroke="#84adff"
                   strokeOpacity={0.55}
                   strokeDasharray="5 5"
                   ifOverflow="extendDomain"
@@ -745,7 +745,7 @@ export const SecurityCandlestickChart = forwardRef<
                 <ReferenceLine
                   yAxisId="price"
                   y={averageCost}
-                  stroke="#555"
+                  stroke="#667085"
                   strokeWidth={1.4}
                   strokeDasharray="3 4"
                   ifOverflow="extendDomain"
@@ -809,11 +809,11 @@ export const SecurityCandlestickChart = forwardRef<
 
       <div className={styles.legend} aria-label="차트 범례">
         <span className={styles.legendItem}>
-          <i className={styles.legendSwatch} style={{ "--legend-color": "#e04444" } as React.CSSProperties} />
+          <i className={styles.legendSwatch} style={{ "--legend-color": "#d92d45" } as React.CSSProperties} />
           ↑ 오른 구간
         </span>
         <span className={styles.legendItem}>
-          <i className={styles.legendSwatch} style={{ "--legend-color": "#2d64c8" } as React.CSSProperties} />
+          <i className={styles.legendSwatch} style={{ "--legend-color": "#175cd3" } as React.CSSProperties} />
           ↓ 내린 구간
         </span>
         <span className={styles.legendItem}>
@@ -830,13 +830,13 @@ export const SecurityCandlestickChart = forwardRef<
         ))}
         {averageCost && averageCost > 0 ? (
           <span className={styles.legendItem}>
-            <i className={styles.legendLine} style={{ "--legend-color": "#555" } as React.CSSProperties} />
+            <i className={styles.legendLine} style={{ "--legend-color": "#667085" } as React.CSSProperties} />
             내가 입력한 평균 매수가 {formatPrice(averageCost, currency)}
           </span>
         ) : null}
         {planOverlay?.reviewBand ? (
           <span className={styles.legendItem}>
-            <i className={styles.legendSwatch} style={{ "--legend-color": "#f2c400" } as React.CSSProperties} />
+            <i className={styles.legendSwatch} style={{ "--legend-color": "#155eef" } as React.CSSProperties} />
             {planOverlay.reviewBand.label} {formatPrice(planOverlay.reviewBand.low, currency)}–{formatPrice(planOverlay.reviewBand.high, currency)}
           </span>
         ) : null}

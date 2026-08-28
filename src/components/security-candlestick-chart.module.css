@@ -1,8 +1,8 @@
 .root {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
-  color: #191919;
+  color: #344054;
 }
 
 .toolbar,
@@ -20,7 +20,7 @@
 .toolbar {
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .toolbarGroup {
@@ -29,36 +29,40 @@
   gap: 10px;
 }
 
+.toolbarGroup {
+  display: none;
+}
+
 .periods {
-  padding: 4px;
+  padding: 3px;
   gap: 2px;
-  border: 1px solid #e7e7e7;
-  border-radius: 12px;
-  background: #f7f7f7;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #f2f4f7;
 }
 
 .periodButton,
 .averageButton {
-  min-height: 36px;
+  min-height: 32px;
   border: 0;
-  border-radius: 9px;
-  color: #666;
+  border-radius: 7px;
+  color: #667085;
   background: transparent;
   font: inherit;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
   cursor: pointer;
 }
 
 .periodButton {
-  min-width: 52px;
-  padding: 0 12px;
+  min-width: 44px;
+  padding: 0 10px;
 }
 
 .periodButton[aria-pressed="true"] {
-  color: #191919;
+  color: #155eef;
   background: #fff;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 8%);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 9%);
 }
 
 .periodButton:disabled {
@@ -73,21 +77,21 @@
 }
 
 .averageToggles > span {
-  color: #777;
-  font-size: 12px;
-  font-weight: 700;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 620;
 }
 
 .averageButton {
-  min-height: 32px;
-  padding: 0 9px;
-  border: 1px solid #e6e6e6;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid #e4e7ec;
 }
 
 .averageButton[aria-pressed="true"] {
-  color: #191919;
-  border-color: #f1ca2d;
-  background: #fff8d7;
+  color: #155eef;
+  border-color: #b2ccff;
+  background: #edf4ff;
 }
 
 .averageButton:disabled {
@@ -99,38 +103,38 @@
 
 .zoomControls {
   gap: 5px;
-  padding-left: 10px;
-  border-left: 1px solid #e3e3e3;
+  padding-left: 9px;
+  border-left: 1px solid #e4e7ec;
 }
 
 .zoomControls > span {
   min-width: 70px;
-  color: #666;
-  font-size: 12px;
-  font-weight: 700;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 620;
   text-align: right;
 }
 
 .zoomButton {
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px solid #dedede;
-  border-radius: 9px;
-  color: #303030;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
+  color: #344054;
   background: #fff;
   font: inherit;
-  font-size: 12px;
-  font-weight: 750;
+  font-size: 10px;
+  font-weight: 650;
   cursor: pointer;
 }
 
 .zoomButton:hover:not(:disabled) {
-  border-color: #c9a91f;
-  background: #fff9dc;
+  border-color: #84adff;
+  background: #f3f7ff;
 }
 
 .zoomButton:focus-visible {
-  outline: 3px solid rgb(244 206 54 / 38%);
+  outline: 3px solid rgb(21 94 239 / 24%);
   outline-offset: 2px;
 }
 
@@ -141,26 +145,23 @@
 }
 
 .availability {
-  margin: -8px 0 0;
-  color: #777;
-  font-size: 12px;
+  margin: -6px 0 0;
+  color: #667085;
+  font-size: 10px;
   line-height: 1.55;
 }
 
 .availabilityNote {
-  margin: -12px 0 0;
-  color: #8a5a00;
-  font-size: 11px;
-  line-height: 1.55;
+  display: none;
 }
 
 .canvas {
   width: 100%;
-  min-height: 360px;
+  min-height: 220px;
   overflow: hidden;
-  border: 1px solid #ededed;
-  border-radius: 16px;
-  background: #fff;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .empty {
@@ -178,10 +179,10 @@
 .tooltip {
   min-width: 204px;
   padding: 12px 14px;
-  border: 1px solid #e2e2e2;
-  border-radius: 12px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
   background: rgb(255 255 255 / 97%);
-  box-shadow: 0 12px 30px rgb(0 0 0 / 12%);
+  box-shadow: 0 12px 30px rgb(16 24 40 / 12%);
 }
 
 .tooltip strong,
@@ -211,8 +212,8 @@
 .legend {
   flex-wrap: wrap;
   gap: 8px 14px;
-  color: #666;
-  font-size: 12px;
+  color: #667085;
+  font-size: 10px;
 }
 
 .legendItem {
@@ -220,9 +221,9 @@
 }
 
 .legendSwatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   background: var(--legend-color, #999);
 }
 
@@ -233,9 +234,7 @@
 }
 
 .observation {
-  border: 1px solid #e8e8e8;
-  border-radius: 14px;
-  background: #fafafa;
+  display: none;
 }
 
 .observation summary {
@@ -266,8 +265,9 @@
   display: grid;
   gap: 8px;
   padding: 13px 14px;
-  border-radius: 14px;
-  background: #fff9df;
+  border: 1px solid #b2ccff;
+  border-radius: 12px;
+  background: #edf4ff;
 }
 
 .stageHeader {
@@ -293,8 +293,8 @@
   min-width: 72px;
   align-content: center;
   padding: 7px 9px;
-  color: #4a3a00;
-  background: #ffe65b;
+  color: #1849a9;
+  background: #d1e0ff;
 }
 
 .stageTrack strong,

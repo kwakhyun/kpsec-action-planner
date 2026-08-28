@@ -8,6 +8,22 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  ArrowRight,
+  ArrowsLeftRight,
+  ChartBar,
+  Check,
+  CheckCircle,
+  ClockCounterClockwise,
+  Info,
+  LockKey,
+  MagnifyingGlass,
+  Pulse,
+  ShieldCheck,
+  ShoppingCartSimple,
+  Sparkle,
+  TrendDown,
+} from "@phosphor-icons/react";
 
 import { DemoOrderSheet } from "@/components/demo-order-sheet";
 import { AdversarialReviewAgent } from "@/components/adversarial-review-agent";
@@ -55,6 +71,7 @@ import {
 import {
   buildExecutionFromMarket,
   localCoreEnvelope,
+  planLabel,
   preferredPlan,
 } from "@/lib/trading-demo";
 import type { TradeCoachSuccess } from "@/lib/trade-coach-contracts";
@@ -78,6 +95,12 @@ const KNOWN_SUBJECTS: Record<string, string> = {
 };
 
 type ConcernMode = "PRE_BUY" | "HOLDING_ANXIETY" | "SELL_TIMING";
+
+const JOURNEY_STEPS = [
+  [1, "시장 이해", "데이터로 현재 상황 파악"],
+  [2, "상황 정리", "나의 고민과 조건 입력"],
+  [3, "실행안 비교", "실행 계획을 비교하고 결정"],
+] as const;
 
 const INITIAL_POSITION_DRAFT: PositionCoachDraft = {
   averageCostKrw: "300000",
@@ -175,7 +198,7 @@ export function SecurityTradingDemo() {
   const [history, setHistory] = useState<ChartHistoryView | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [chartPeriod, setChartPeriod] = useState<CandlestickPeriod>("DAY");
-  const [concern, setConcern] = useState<ConcernMode | null>(null);
+  const [concern, setConcern] = useState<ConcernMode | null>("PRE_BUY");
   const [positionDraft, setPositionDraft] = useState<PositionCoachDraft>(
     INITIAL_POSITION_DRAFT,
   );
@@ -554,7 +577,7 @@ export function SecurityTradingDemo() {
     setHistory(null);
     setHistoryError(null);
     setChartPeriod("DAY");
-    setConcern(null);
+    setConcern("PRE_BUY");
     setPositionCoach(null);
     setChallengeChangeSummary(null);
     setPlanVisible(false);
@@ -646,6 +669,7 @@ export function SecurityTradingDemo() {
   function openConcern(nextConcern: ConcernMode) {
     if (!market || !marketSupported) return;
     setConcern(nextConcern);
+    window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 60);
     setTimeAxisDismissed(false);
     setPositionCoach(null);
     setChallengeChangeSummary(null);
@@ -888,6 +912,11 @@ export function SecurityTradingDemo() {
     setAiState("IDLE");
   }
 
+  function reopenPlanAnswers() {
+    setAgentOpen(true);
+    editStep(2);
+  }
+
   function goBack() {
     const target = Math.max(1, step - 1) as GuidedTradeStep;
     editStep(target);
@@ -915,6 +944,7 @@ export function SecurityTradingDemo() {
 
     setSelectedPlanId(coreDecision.preferredPlanId);
     setPlanVisible(true);
+    setAgentOpen(false);
     setAiEnvelope(null);
     setAiMessage(null);
     setAiState("IDLE");
@@ -1063,315 +1093,413 @@ export function SecurityTradingDemo() {
   );
   const closeAgent = useCallback(() => setAgentOpen(false), []);
   const closeOrder = useCallback(() => setOrderOpen(false), []);
+  const journeyStep = planVisible ? 3 : agentOpen ? 2 : 1;
 
   return (
-    <div className={`trade-demo${agentOpen ? " is-agent-open" : ""}`}>
-      <header className="trade-topbar">
-        <div className="trade-topbar__brand">
-          <strong>카카오페이증권 데모</strong>
-          <span>해커톤 데모 · 실제 주문 없음</span>
-        </div>
-        <form className="security-search" role="search" onSubmit={searchMarket}>
+    <div className={`trade-demo studio-app${agentOpen ? " is-agent-open" : ""}${planVisible ? " has-plan" : ""}`}>
+      <a className="skip-link" href="#planner-main">본문 바로가기</a>
+      <header className="studio-header">
+        <a className="studio-brand" href="#planner-main" aria-label="Action Planner 홈">
+          <span className="studio-brand__mark" aria-hidden="true">AP</span>
+          <span className="studio-brand__copy">
+            <strong>Action Planner</strong>
+            <small>초보 투자자를 위한 실행 계획</small>
+          </span>
+        </a>
+
+        <form className="studio-search" role="search" onSubmit={searchMarket}>
+          <MagnifyingGlass size={20} weight="regular" aria-hidden="true" />
           <label htmlFor="security-search-input" className="sr-only">종목 코드 검색</label>
           <input
             id="security-search-input"
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value.toUpperCase())}
-            placeholder="종목 코드 검색 · 005930.KS"
+            placeholder="종목 코드 또는 이름 검색"
           />
-          <button type="submit" disabled={marketLoading}>검색</button>
+          <button type="submit" disabled={marketLoading} aria-label="종목 조회">
+            <span>조회</span>
+            <ArrowRight size={17} weight="bold" aria-hidden="true" />
+          </button>
         </form>
-        <div className="trade-topbar__time">
-          <span>데이터 기준</span>
-          <strong>{market ? formatDateTime(market.provenance.asOf) : "확인 중"}</strong>
+
+        <div className="studio-data-status" aria-live="polite">
+          <CheckCircle size={20} weight="fill" aria-hidden="true" />
+          <span>
+            <small>공개 데이터 기준</small>
+            <strong>{market ? formatDateTime(market.provenance.asOf) : "확인 중"}</strong>
+          </span>
         </div>
       </header>
 
-      <main className="trade-layout">
-        <section className="security-detail" aria-label="단일 종목 상세">
-          <div className="security-quote-card">
-            {marketLoading ? (
-              <div className="market-loading" role="status">
-                <strong>Yahoo Finance 공개 데이터를 확인하고 있어요.</strong>
-                <span>가격을 추정하지 않고 검증이 끝날 때까지 기다립니다.</span>
-              </div>
-            ) : null}
-            {!marketLoading && marketError ? (
-              <div className="market-error" role="alert">
-                <strong>공개 데이터를 표시하지 못했어요.</strong>
-                <p>{marketError}</p>
-                <button type="button" onClick={() => void loadMarket(searchValue)}>
-                  다시 확인
-                </button>
-              </div>
-            ) : null}
-            {!marketLoading && market ? (
-              <>
-                <header className="security-quote-card__header">
-                  <div>
-                    <span>국내주식 · 공개 데이터 기준</span>
-                    <h1>{input.subjectLabel}</h1>
-                    <p>{market.symbol} · {exchangeLabel(market.provenance.exchange)}</p>
-                  </div>
-                  <span className="data-freshness-badge">최근 완료 거래일</span>
-                </header>
+      <nav className="studio-journey" aria-label="실행 계획 진행 단계">
+        <ol>
+          {JOURNEY_STEPS.map(([item, title, description]) => {
+            const state = item < journeyStep ? "complete" : item === journeyStep ? "active" : "upcoming";
+            return (
+              <li key={item} data-state={state} aria-current={state === "active" ? "step" : undefined}>
+                <span className="studio-journey__number" aria-hidden="true">
+                  {state === "complete" ? <Check size={16} weight="bold" /> : item}
+                </span>
+                <span>
+                  <strong>{title}</strong>
+                  <small>{description}</small>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
-                <div className="security-quote-card__price">
+      <main id="planner-main" className="studio-workspace">
+        {marketLoading ? (
+          <section className="studio-state" role="status">
+            <span className="studio-state__icon"><Pulse size={28} weight="regular" aria-hidden="true" /></span>
+            <div>
+              <strong>공개 시장 데이터를 확인하고 있어요</strong>
+              <p>가격을 추정하지 않고 검증이 끝날 때까지 기다립니다.</p>
+            </div>
+          </section>
+        ) : null}
+
+        {!marketLoading && marketError ? (
+          <section className="studio-state studio-state--error" role="alert">
+            <span className="studio-state__icon"><Info size={28} weight="regular" aria-hidden="true" /></span>
+            <div>
+              <strong>공개 데이터를 표시하지 못했어요</strong>
+              <p>{marketError}</p>
+              <button type="button" className="studio-button studio-button--secondary" onClick={() => void loadMarket(searchValue)}>
+                다시 확인
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {!marketLoading && market ? (
+          <>
+            <section className="studio-evidence" aria-labelledby="security-title">
+              <header className="studio-quote">
+                <div className="studio-quote__title">
+                  <span>국내주식 · {exchangeLabel(market.provenance.exchange)}</span>
+                  <h1 id="security-title">{input.subjectLabel}</h1>
+                  <p>{market.symbol}</p>
+                </div>
+                <div className="studio-quote__price">
                   <strong>{formatKrw(market.quote.latestPrice)}</strong>
                   <span className={changeTone}>
-                    {market.quote.change > 0 ? "+" : ""}
-                    {formatKrw(market.quote.change)} · {market.quote.changePct > 0 ? "+" : ""}
-                    {market.quote.changePct.toFixed(2)}%
+                    {market.quote.change > 0 ? "+" : ""}{formatKrw(market.quote.change)}
+                    <i aria-hidden="true">·</i>
+                    {market.quote.changePct > 0 ? "+" : ""}{market.quote.changePct.toFixed(2)}%
                   </span>
                 </div>
+              </header>
 
-                <dl className="security-quote-card__metrics">
-                  <div><dt>거래량</dt><dd>{formatVolume(market.quote.volume)}</dd></div>
-                  <div><dt>최근 20일 가격 범위</dt><dd>{formatKrw(market.metrics.range20d.low)} – {formatKrw(market.metrics.range20d.high)}</dd></div>
-                  <div><dt>가격 흔들림 참고값</dt><dd>{market.metrics.volatility20dPct.toFixed(1)}%</dd></div>
-                  <div><dt>평소 대비 최근 거래량</dt><dd>{market.metrics.relativeVolume20d?.toFixed(2) ?? "–"}배</dd></div>
-                </dl>
-
-                <div className="security-chart-card">
-                  <SecurityCandlestickChart
-                    dailyBars={market.bars}
-                    intraday={intraday}
-                    intradayUnavailableReason={intradayError}
-                    history={history}
-                    historyUnavailableReason={historyError}
-                    currency={market.provenance.currency}
-                    exchangeTimezone={market.provenance.exchangeTimezone}
-                    period={chartPeriod}
-                    onPeriodChange={selectChartPeriod}
-                    averageCost={
-                      concern && concern !== "PRE_BUY"
-                        ? Number(positionDraft.averageCostKrw) || null
-                        : null
-                    }
-                    observation={market.observations ?? null}
-                    planOverlay={chartOverlay}
-                    defaultPeriod="DAY"
-                  />
-                  {planVisible && selectedPlan ? (
-                    <div className="chart-plan-steps" aria-label="선택한 계획의 회차별 수량">
-                      {selectedPlan.allocations.map((allocation) => (
-                        <span key={`${selectedPlan.id}-${allocation.sequence}`}>
-                          <strong>{allocation.sequence}회차</strong>
-                          {allocation.shares.toLocaleString("ko-KR")}주 · 다음 회차 전 재확인
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="market-source-row">
+              <section className="studio-chart" aria-label="가격 흐름 근거">
+                <header className="studio-section-heading">
                   <div>
-                    <strong>Yahoo Finance</strong>
-                    <span>최근 3개월 · 하루 간격 · {market.provenance.tradingSessionCount}개 거래일</span>
+                    <span>시장 근거</span>
+                    <strong>가격 흐름과 거래량</strong>
                   </div>
-                  <p>{beginnerDelayNotice(market.provenance.delayNotice)}</p>
-                  <a href={market.provenance.sourceUrl} target="_blank" rel="noreferrer">원본 출처</a>
-                </div>
+                  <span className="studio-live-label"><CheckCircle size={15} weight="fill" aria-hidden="true" /> 검증된 공개 데이터</span>
+                </header>
+                <SecurityCandlestickChart
+                  dailyBars={market.bars}
+                  intraday={intraday}
+                  intradayUnavailableReason={intradayError}
+                  history={history}
+                  historyUnavailableReason={historyError}
+                  currency={market.provenance.currency}
+                  exchangeTimezone={market.provenance.exchangeTimezone}
+                  period={chartPeriod}
+                  onPeriodChange={selectChartPeriod}
+                  averageCost={
+                    concern && concern !== "PRE_BUY"
+                      ? Number(positionDraft.averageCostKrw) || null
+                      : null
+                  }
+                  observation={market.observations ?? null}
+                  planOverlay={chartOverlay}
+                  defaultPeriod="DAY"
+                  height={250}
+                />
+                {planVisible && selectedPlan ? (
+                  <div className="chart-plan-steps" aria-label="선택한 계획의 회차별 수량">
+                    {selectedPlan.allocations.map((allocation) => (
+                      <span key={`${selectedPlan.id}-${allocation.sequence}`}>
+                        <strong>{allocation.sequence}회차</strong>
+                        {allocation.shares.toLocaleString("ko-KR")}주 · 다음 회차 전 재확인
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
 
-                <div className="trade-cta-row">
+              <dl className="studio-metrics">
+                <div>
+                  <span className="studio-metrics__icon"><ChartBar size={20} weight="regular" aria-hidden="true" /></span>
+                  <dt><strong>거래량</strong><small>최근 완료 거래일</small></dt>
+                  <dd>{formatVolume(market.quote.volume)}</dd>
+                </div>
+                <div>
+                  <span className="studio-metrics__icon"><ArrowsLeftRight size={20} weight="regular" aria-hidden="true" /></span>
+                  <dt><strong>최근 20일 가격 범위</strong><small>저가에서 고가</small></dt>
+                  <dd>{formatKrw(market.metrics.range20d.low)} – {formatKrw(market.metrics.range20d.high)}</dd>
+                </div>
+                <div>
+                  <span className="studio-metrics__icon"><ClockCounterClockwise size={20} weight="regular" aria-hidden="true" /></span>
+                  <dt><strong>평소 대비 최근 거래량</strong><small>최근 20일 평균 기준</small></dt>
+                  <dd>{market.metrics.relativeVolume20d?.toFixed(2) ?? "–"}배</dd>
+                </div>
+              </dl>
+
+              <footer className="studio-source">
+                <span>Yahoo Finance · 최근 3개월 · {market.provenance.tradingSessionCount}개 거래일</span>
+                <a href={market.provenance.sourceUrl} target="_blank" rel="noreferrer">
+                  원본 출처 <ArrowRight size={14} weight="bold" aria-hidden="true" />
+                </a>
+              </footer>
+            </section>
+
+            <section className="studio-decision" aria-label="상황 정리와 실행 계획">
+              {planVisible && selectedPlan ? (
+                <aside className="agent-complete studio-complete" aria-labelledby="agent-complete-title" aria-live="polite">
+                  <div className="studio-complete__icon"><CheckCircle size={32} weight="fill" aria-hidden="true" /></div>
+                  <span className="studio-kicker">상황 정리 완료</span>
+                  <h2 id="agent-complete-title">비교할 실행안을 준비했어요</h2>
+                  <p>수익을 예측한 추천이 아니라, 내가 정한 예산과 감당 범위 안에서 실행 방법을 나란히 보여드립니다.</p>
+                  <dl className="agent-complete__summary">
+                    <div><dt>현재 선택</dt><dd>{planLabel(selectedPlan.id)}</dd></div>
+                    <div><dt>총수량</dt><dd>{selectedPlan.totalShares.toLocaleString("ko-KR")}주</dd></div>
+                    <div><dt>기준금액</dt><dd>{formatKrw(selectedPlan.referenceTotalAmountKrw)}</dd></div>
+                  </dl>
+                  <div className="agent-complete__actions">
+                    <button
+                      type="button"
+                      className="studio-button studio-button--primary"
+                      onClick={() => planSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    >
+                      실행안 비교하기 <ArrowRight size={18} weight="bold" aria-hidden="true" />
+                    </button>
+                    <button type="button" className="studio-button studio-button--secondary" onClick={reopenPlanAnswers}>
+                      입력 조건 다시 정리하기
+                    </button>
+                  </div>
+                  <small className="agent-complete__boundary"><LockKey size={15} weight="regular" aria-hidden="true" /> 가격과 수량은 계획 계산기가 만들며 AI가 바꾸지 않습니다.</small>
+                </aside>
+              ) : agentOpen ? (
+                concern === "HOLDING_ANXIETY" || concern === "SELL_TIMING" ? (
+                  <PositionCoachPanel
+                    key={concern}
+                    concern={concern}
+                    value={positionDraft}
+                    result={positionCoach}
+                    disabled={false}
+                    hideTimeAxis={timeAxisDismissed}
+                    errorMessage={agentError}
+                    onChange={changePositionDraft}
+                    onSubmit={submitPositionCoach}
+                    onClose={closeAgent}
+                    onTimeAxisAction={handleTimeAxisAction}
+                  />
+                ) : (
+                  <GuidedTradeAgent
+                    open={agentOpen}
+                    input={input}
+                    step={step}
+                    completedSteps={completedSteps}
+                    loading={aiState === "LOADING"}
+                    errorMessage={agentError}
+                    onInputChange={setInput}
+                    onContinue={continueConversation}
+                    onBack={goBack}
+                    onClose={closeAgent}
+                  />
+                )
+              ) : (
+                <div className="studio-decision__start">
+                  <div className="studio-mobile-quote" aria-label="선택한 종목 요약">
+                    <span>{input.subjectLabel} · {market.symbol}</span>
+                    <strong>{formatKrw(market.quote.latestPrice)}</strong>
+                    <small className={changeTone}>
+                      {market.quote.change > 0 ? "+" : ""}{formatKrw(market.quote.change)} · {market.quote.changePct > 0 ? "+" : ""}{market.quote.changePct.toFixed(2)}%
+                    </small>
+                  </div>
+                  <header className="studio-decision__intro">
+                    <span className="studio-ai-label"><Sparkle size={20} weight="fill" aria-hidden="true" /> AI 플래너</span>
+                    <p>공개된 시장 정보와 내가 정한 감당 범위를 바탕으로, 세 가지 상황별 실행안을 비교해 드릴게요.</p>
+                    <h2>지금 어떤 판단을<br />정리할까요?</h2>
+                    <small>현재 상황과 고민에 가장 가까운 항목을 선택해 주세요.</small>
+                  </header>
+
                   {!marketSupported ? (
                     <p className="market-support-warning" role="note">
-                      현재 수직 시연은 원화 가격과 평균 거래량을 함께 확인할 수 있는 종목에서만 실행안을 계산합니다.
+                      원화 가격과 평균 거래량을 함께 확인할 수 있는 종목에서 실행안을 계산할 수 있습니다.
                     </p>
                   ) : null}
-                  <button type="button" className="trade-cta trade-cta--buy" onClick={() => openConcern("PRE_BUY")} disabled={!marketSupported}>
-                    살까 고민돼요
-                  </button>
-                  <button type="button" className="trade-cta trade-cta--holding" onClick={() => openConcern("HOLDING_ANXIETY")} disabled={!marketSupported}>
-                    샀는데 불안해요
-                  </button>
-                  <button type="button" className="trade-cta trade-cta--sell" onClick={() => openConcern("SELL_TIMING")} disabled={!marketSupported}>
-                    팔 시점을 고민해요
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
 
-          {planVisible && presentedDecision && market ? (
-            <section ref={planSectionRef} className="execution-result-wrap">
-              {concern ? (
-                <div className="understood-concern">
-                  <div>
-                    <span>제가 이해한 고민 · 사용자 입력</span>
-                    <strong>{concernLabel(concern)}</strong>
-                    <p>
-                      {input.intent === "BUY"
-                        ? `${formatKrw(input.budgetKrw ?? 0)} 예산으로 ${input.deadline === "NO_RUSH" ? "급하지 않게" : "정한 기한 안에"} 살 방법을 비교하고 있어요.`
-                        : `${(input.holdingQuantity ?? 0).toLocaleString("ko-KR")}주를 보유한 상태에서 감당 범위와 매도 방식을 다시 확인하고 있어요.`}
-                    </p>
+                  <div className="studio-concerns" role="group" aria-label="현재 가장 고민되는 상황">
+                    <button
+                      type="button"
+                      aria-pressed={concern === "PRE_BUY"}
+                      onClick={() => setConcern("PRE_BUY")}
+                      disabled={!marketSupported}
+                    >
+                      <span className="studio-concerns__icon studio-concerns__icon--buy"><ShoppingCartSimple size={28} weight="regular" aria-hidden="true" /></span>
+                      <span className="studio-concerns__copy"><strong>살까 고민돼요</strong><small>예산 안에서 살 방법을 비교하고 싶어요.</small></span>
+                      <span className="studio-concerns__check" aria-hidden="true">{concern === "PRE_BUY" ? <Check size={18} weight="bold" /> : null}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={concern === "HOLDING_ANXIETY"}
+                      onClick={() => setConcern("HOLDING_ANXIETY")}
+                      disabled={!marketSupported}
+                    >
+                      <span className="studio-concerns__icon studio-concerns__icon--hold"><ShieldCheck size={28} weight="regular" aria-hidden="true" /></span>
+                      <span className="studio-concerns__copy"><strong>샀는데 불안해요</strong><small>현재 계획과 다시 볼 기준을 확인하고 싶어요.</small></span>
+                      <span className="studio-concerns__check" aria-hidden="true">{concern === "HOLDING_ANXIETY" ? <Check size={18} weight="bold" /> : null}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={concern === "SELL_TIMING"}
+                      onClick={() => setConcern("SELL_TIMING")}
+                      disabled={!marketSupported}
+                    >
+                      <span className="studio-concerns__icon studio-concerns__icon--sell"><TrendDown size={28} weight="regular" aria-hidden="true" /></span>
+                      <span className="studio-concerns__copy"><strong>팔 시점을 고민하고 있어요</strong><small>전량과 분할 매도 방법을 비교하고 싶어요.</small></span>
+                      <span className="studio-concerns__check" aria-hidden="true">{concern === "SELL_TIMING" ? <Check size={18} weight="bold" /> : null}</span>
+                    </button>
                   </div>
-                  <div>
-                    <span>지금 확인한 시장 상황 · 공개 데이터</span>
-                    <strong>{formatKrw(market.quote.latestPrice)}</strong>
-                    <p>{beginnerDelayNotice(market.provenance.delayNotice)}</p>
-                  </div>
+
+                  <footer className="studio-decision__footer">
+                    <div className="studio-selection-summary">
+                      <CheckCircle size={20} weight="fill" aria-hidden="true" />
+                      <span><small>선택한 고민</small><strong>{concern ? concernLabel(concern) : "아직 선택하지 않았어요"}</strong></span>
+                    </div>
+                    <div className="studio-privacy-note"><LockKey size={18} weight="regular" aria-hidden="true" /><span>입력 내용은 계획 계산에만 사용됩니다.</span></div>
+                    <button
+                      type="button"
+                      className="studio-button studio-button--primary"
+                      disabled={!marketSupported || !concern}
+                      onClick={() => concern && openConcern(concern)}
+                    >
+                      선택하고 계속하기 <ArrowRight size={18} weight="bold" aria-hidden="true" />
+                    </button>
+                  </footer>
                 </div>
-              ) : null}
-              <ExecutionOptionsPanel
-                input={input}
-                decision={presentedDecision}
-                explanation={verifiedExplanation}
-                selectedPlanId={selectedPlan?.id ?? presentedDecision.preferredPlanId}
-                previousRegret={previousRegret}
-                previousPreferredPlanId={previousPreferredPlanId}
-                aiState={aiState}
-                aiMessage={aiMessage}
-                canPracticeOrder={canPracticeOrder}
-                aiExplanationEnabled={concern === "PRE_BUY"}
-                onSelectPlan={setSelectedPlanId}
-                onChangeRegret={changeRegret}
-                onRequestAi={() =>
-                  void requestAiExplanation(
-                    input,
-                    market,
-                    coreDecision?.preferredPlanId ?? presentedDecision.preferredPlanId,
-                  )
-                }
-                onOpenOrder={() => setOrderOpen(true)}
-              />
-
-              {challengeChangeSummary ? (
-                <aside className="agentic-loop-summary" role="status">
-                  <strong>반대 의견에 답한 뒤 계획이 달라졌어요</strong>
-                  <p>{challengeChangeSummary}</p>
-                  <small>AI가 계획을 고친 것이 아니라, 답변을 받은 계획 계산기가 다시 계산했습니다.</small>
-                </aside>
-              ) : null}
-
-              <AdversarialReviewAgent
-                request={adversarialRequest}
-                requestKey={adversarialRequestKey}
-                onCoreRecalculate={applyAdversarialAnswer}
-                disabled={!adversarialRequest || aiState === "LOADING"}
-                className="execution-challenge"
-              />
-
-              <details className="plan-making-summary">
-                <summary>
-                  <span className="plan-making-summary__heading">
-                    <strong>이 계획은 어떻게 만들었나요?</strong>
-                    <small>공개 시장 데이터와 내 답변으로 수량과 금액을 계산했어요.</small>
-                  </span>
-                  <span className="plan-making-summary__toggle" aria-hidden="true">
-                    <span className="plan-making-summary__open-label">과정 보기</span>
-                    <span className="plan-making-summary__close-label">접기</span>
-                  </span>
-                </summary>
-
-                <ol className="plan-making-summary__steps">
-                  <li>
-                    <strong>시장 정보 확인</strong>
-                    <span>Yahoo Finance 공개 데이터의 가격, 거래량, 기준 시각을 확인했어요.</span>
-                  </li>
-                  <li>
-                    <strong>내 답변으로 계획 계산</strong>
-                    <span>예산이나 보유 수량, 기한, 감당 범위로 회차별 수량과 다시 확인할 조건을 계산했어요.</span>
-                  </li>
-                  <li data-state={aiState.toLowerCase()}>
-                    <strong>AI가 선택 차이를 설명</strong>
-                    <span>
-                      {aiState === "SUCCESS"
-                        ? "계산된 숫자를 바꾸지 않고 선택마다 무엇이 다른지 쉬운 말로 설명했어요."
-                        : aiState === "LOADING"
-                          ? "계산된 숫자를 바꾸지 않는 설명인지 확인하고 있어요."
-                          : aiState === "FAILURE"
-                            ? "AI 설명을 안전하게 확인하지 못해 표시하지 않았어요. 계산 결과는 그대로 볼 수 있어요."
-                            : "AI 설명은 아직 요청하지 않았어요. 계산 결과는 AI 없이도 확인할 수 있어요."}
-                    </span>
-                  </li>
-                </ol>
-
-                <p className="plan-making-summary__boundary">
-                  수량, 금액, 다시 확인할 조건은 계획 계산기가 만들며 AI는 이 값을 바꿀 수 없습니다.
-                </p>
-              </details>
-
-              {evidenceEnvelope ? (
-                <PlanEvidencePanel
-                  envelope={evidenceEnvelope}
-                  selectedPlanId={selectedPlan?.id ?? presentedDecision.preferredPlanId}
-                  usedTradingSessionCount={market.provenance.tradingSessionCount}
-                />
-              ) : null}
+              )}
             </section>
-          ) : null}
-        </section>
 
-        <div className="agent-rail">
-          {agentOpen ? (
-            concern === "HOLDING_ANXIETY" || concern === "SELL_TIMING" ? (
-              <PositionCoachPanel
-                key={concern}
-                concern={concern}
-                value={positionDraft}
-                result={positionCoach}
-                disabled={false}
-                hideTimeAxis={timeAxisDismissed}
-                errorMessage={agentError}
-                onChange={changePositionDraft}
-                onSubmit={submitPositionCoach}
-                onClose={closeAgent}
-                onTimeAxisAction={handleTimeAxisAction}
-              />
-            ) : (
-              <GuidedTradeAgent
-                open={agentOpen}
-                input={input}
-                step={step}
-                completedSteps={completedSteps}
-                loading={aiState === "LOADING"}
-                errorMessage={agentError}
-                onInputChange={setInput}
-                onContinue={continueConversation}
-                onBack={goBack}
-                onClose={closeAgent}
-              />
-            )
-          ) : (
-            <aside className="agent-rail__empty">
-              <div className="agent-rail__identity">
-                <span className="agent-ai-badge" aria-hidden="true">AI</span>
-                <span>
-                  <strong>AI 매매 동반자</strong>
-                  <small>공개 데이터 연결 준비됨</small>
-                </span>
-                <span className="agent-rail__ready">대화 시작</span>
-              </div>
-              <h2>지금 어떤 고민을 함께 풀어볼까요?</h2>
-              <p>공개 시장 정보와 내가 정한 감당 범위를 나눠 보고, 주문 전후의 선택을 함께 비교합니다.</p>
-              <div className="agent-ai-flow" aria-label="AI 매매 동반자가 계획을 만드는 순서">
-                <span><strong>1</strong>시장 정보 확인</span>
-                <span><strong>2</strong>조건으로 계획 계산</span>
-                <span><strong>3</strong>AI가 쉽게 설명</span>
-              </div>
-              <div className="agent-entry-choices">
-                <button type="button" onClick={() => openConcern("PRE_BUY")} disabled={!marketSupported}>
-                  살까 고민돼요
-                </button>
-                <button type="button" onClick={() => openConcern("HOLDING_ANXIETY")} disabled={!marketSupported}>
-                  샀는데 가격이 움직여 불안해요
-                </button>
-                <button type="button" onClick={() => openConcern("SELL_TIMING")} disabled={!marketSupported}>
-                  팔 시점을 고민하고 있어요
-                </button>
-              </div>
-              <details className="agent-ai-boundary">
-                <summary>AI는 어떤 도움을 주나요?</summary>
-                <p>AI는 질문과 설명을 맡고, 가격·수량·다시 확인할 조건은 검증된 공개 데이터와 계획 계산기가 계산합니다.</p>
-              </details>
-            </aside>
-          )}
-        </div>
+            {planVisible && presentedDecision ? (
+              <section ref={planSectionRef} className="execution-result-wrap studio-results">
+                <header className="studio-results__heading">
+                  <span className="studio-kicker">실행안 비교</span>
+                  <h2>나에게 맞는 실행 방식을 비교해 보세요</h2>
+                  <p>예측이 아니라 입력한 조건을 서로 다른 실행 방식에 적용한 결과입니다.</p>
+                </header>
+
+                {concern ? (
+                  <div className="understood-concern">
+                    <div>
+                      <span>내가 정리한 고민</span>
+                      <strong>{concernLabel(concern)}</strong>
+                      <p>
+                        {input.intent === "BUY"
+                          ? `${formatKrw(input.budgetKrw ?? 0)} 예산으로 ${input.deadline === "NO_RUSH" ? "급하지 않게" : "정한 기한 안에"} 살 방법을 비교합니다.`
+                          : `${(input.holdingQuantity ?? 0).toLocaleString("ko-KR")}주를 보유한 상태에서 감당 범위와 매도 방식을 다시 확인합니다.`}
+                      </p>
+                    </div>
+                    <div>
+                      <span>계산에 사용한 공개 데이터</span>
+                      <strong>{formatKrw(market.quote.latestPrice)}</strong>
+                      <p>{beginnerDelayNotice(market.provenance.delayNotice)}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <ExecutionOptionsPanel
+                  input={input}
+                  decision={presentedDecision}
+                  explanation={verifiedExplanation}
+                  selectedPlanId={selectedPlan?.id ?? presentedDecision.preferredPlanId}
+                  previousRegret={previousRegret}
+                  previousPreferredPlanId={previousPreferredPlanId}
+                  aiState={aiState}
+                  aiMessage={aiMessage}
+                  canPracticeOrder={canPracticeOrder}
+                  aiExplanationEnabled={concern === "PRE_BUY"}
+                  onSelectPlan={setSelectedPlanId}
+                  onChangeRegret={changeRegret}
+                  onRequestAi={() =>
+                    void requestAiExplanation(
+                      input,
+                      market,
+                      coreDecision?.preferredPlanId ?? presentedDecision.preferredPlanId,
+                    )
+                  }
+                  onOpenOrder={() => setOrderOpen(true)}
+                />
+
+                {challengeChangeSummary ? (
+                  <aside className="agentic-loop-summary" role="status">
+                    <strong>반대 의견에 답한 뒤 계획이 달라졌어요</strong>
+                    <p>{challengeChangeSummary}</p>
+                    <small>AI가 계획을 고친 것이 아니라, 답변을 받은 계획 계산기가 다시 계산했습니다.</small>
+                  </aside>
+                ) : null}
+
+                <AdversarialReviewAgent
+                  request={adversarialRequest}
+                  requestKey={adversarialRequestKey}
+                  onCoreRecalculate={applyAdversarialAnswer}
+                  disabled={!adversarialRequest || aiState === "LOADING"}
+                  className="execution-challenge"
+                />
+
+                <details className="plan-making-summary">
+                  <summary>
+                    <span className="plan-making-summary__heading">
+                      <strong>이 계획은 어떻게 만들었나요?</strong>
+                      <small>공개 시장 데이터와 내 답변으로 수량과 금액을 계산했어요.</small>
+                    </span>
+                    <span className="plan-making-summary__toggle" aria-hidden="true">
+                      <span className="plan-making-summary__open-label">과정 보기</span>
+                      <span className="plan-making-summary__close-label">접기</span>
+                    </span>
+                  </summary>
+                  <ol className="plan-making-summary__steps">
+                    <li><strong>시장 정보 확인</strong><span>Yahoo Finance 공개 데이터의 가격, 거래량, 기준 시각을 확인했어요.</span></li>
+                    <li><strong>내 답변으로 계획 계산</strong><span>예산이나 보유 수량, 기한, 감당 범위로 회차별 수량과 다시 확인할 조건을 계산했어요.</span></li>
+                    <li data-state={aiState.toLowerCase()}>
+                      <strong>AI가 선택 차이를 설명</strong>
+                      <span>
+                        {aiState === "SUCCESS"
+                          ? "계산된 숫자를 바꾸지 않고 선택마다 무엇이 다른지 쉬운 말로 설명했어요."
+                          : aiState === "LOADING"
+                            ? "계산된 숫자를 바꾸지 않는 설명인지 확인하고 있어요."
+                            : aiState === "FAILURE"
+                              ? "AI 설명을 안전하게 확인하지 못해 표시하지 않았어요. 계산 결과는 그대로 볼 수 있어요."
+                              : "AI 설명은 아직 요청하지 않았어요. 계산 결과는 AI 없이도 확인할 수 있어요."}
+                      </span>
+                    </li>
+                  </ol>
+                  <p className="plan-making-summary__boundary">수량, 금액, 다시 확인할 조건은 계획 계산기가 만들며 AI는 이 값을 바꿀 수 없습니다.</p>
+                </details>
+
+                {evidenceEnvelope ? (
+                  <PlanEvidencePanel
+                    envelope={evidenceEnvelope}
+                    selectedPlanId={selectedPlan?.id ?? presentedDecision.preferredPlanId}
+                    usedTradingSessionCount={market.provenance.tradingSessionCount}
+                  />
+                ) : null}
+              </section>
+            ) : null}
+          </>
+        ) : null}
       </main>
 
-      <footer className="trade-demo-footer">
-        이 화면은 해커톤 데모입니다. 종목 추천·미래 가격 예측·실제 주문을 제공하지 않습니다.
+      <footer className="studio-footer">
+        <span><Info size={16} weight="regular" aria-hidden="true" /> Action Planner는 종목 추천, 미래 가격 예측, 실제 주문을 제공하지 않습니다.</span>
+        <strong>나의 판단을 더 선명하게 만드는 의사결정 도구</strong>
       </footer>
 
       <DemoOrderSheet
