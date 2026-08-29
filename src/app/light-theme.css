@@ -1,0 +1,843 @@
+/* Phase 3.2 final light companion overrides. Keep these after Phase 3.1. */
+
+.trade-topbar {
+  border-color: #e0e3e7;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 12px rgba(28, 34, 42, 0.06);
+}
+
+.trade-topbar__brand strong,
+.trade-topbar__time strong,
+.security-quote-card__header h1,
+.security-quote-card__price > strong,
+.security-quote-card__metrics dd,
+.agent-rail__empty h2,
+.guided-agent__header h2,
+.execution-options__header h2,
+.execution-option h3,
+.execution-option strong,
+.plan-evidence-panel strong,
+.demo-order-sheet__header h2,
+.demo-order-sheet dd {
+  color: #171a1e;
+}
+
+.trade-topbar__brand span,
+.trade-topbar__time span,
+.security-quote-card__header span,
+.security-quote-card__header p,
+.security-quote-card__metrics dt,
+.agent-rail__empty p,
+.guided-agent__question > span,
+.plan-evidence-panel dt,
+.demo-order-sheet dt {
+  color: #727b85;
+}
+
+.security-search input,
+.security-search button,
+.security-quote-card,
+.execution-options,
+.agent-rail__empty,
+.guided-agent,
+.position-coach-panel,
+.plan-evidence-panel,
+.demo-order-sheet__dialog {
+  border-color: #e0e4e8;
+  background: #ffffff;
+  color: #1d2024;
+  box-shadow: 0 10px 30px rgba(31, 39, 48, 0.07);
+}
+
+.security-search input {
+  background: #f7f8f9;
+  color: #171a1e;
+}
+
+.security-search button,
+.guided-agent__header button,
+.position-coach-panel__close,
+.demo-order-sheet__close {
+  border-color: #dfe3e7;
+  background: #f0f2f4;
+  color: #33383e;
+}
+
+.security-chart-card {
+  border-color: #e5e7ea;
+  background: #fbfbfc;
+}
+
+.data-freshness-badge,
+.execution-options__not-prediction {
+  border-color: rgba(197, 154, 0, 0.28);
+  background: #fff8d8;
+  color: #806500;
+}
+
+.market-source-row,
+.market-source-row p,
+.trade-demo-footer {
+  color: #707983;
+}
+
+.market-source-row strong,
+.market-source-row a,
+.guided-agent__reflection p,
+.execution-options__header p,
+.execution-options__explanation p,
+.execution-option > p,
+.execution-options__review-line p,
+.plan-evidence-panel p,
+.demo-order-sheet__recheck strong {
+  color: #424a53;
+}
+
+.trade-cta-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trade-cta--buy {
+  border-color: rgba(216, 59, 76, 0.22);
+  background: #fff2f4;
+  color: #c73444;
+}
+
+.trade-cta--holding {
+  border: 1px solid #e0b800;
+  background: #fff8d8;
+  color: #635000;
+}
+
+.trade-cta--sell {
+  border-color: rgba(40, 120, 208, 0.22);
+  background: #f0f6fd;
+  color: #246caf;
+}
+
+.agent-entry-choices {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.agent-entry-choices button {
+  min-height: 52px;
+  border: 1px solid #e0e4e8;
+  border-radius: 14px;
+  padding: 10px 14px;
+  background: #fff;
+  color: #23272c;
+  font: inherit;
+  font-weight: 750;
+  text-align: left;
+}
+
+.agent-entry-choices button:first-child {
+  border-color: #e0b800;
+  background: #fff9df;
+}
+
+.guided-agent__header,
+.demo-order-sheet__actions {
+  background: #fafbfc;
+}
+
+.guided-agent__answer {
+  background: #f0f4f8;
+  color: #28323d;
+}
+
+.guided-agent__reflection,
+.execution-options__counterfactual,
+.plan-evidence-panel__boundary,
+.demo-order-sheet__notice {
+  border-color: #eadb8f;
+  background: #fffbed;
+  color: #5e5638;
+}
+
+.guided-agent__choices button,
+.guided-agent__regret-choices button,
+.execution-options__regret-switch button,
+.execution-option,
+.execution-options__explanation,
+.plan-evidence-panel__grid > div,
+.demo-order-sheet__allocation {
+  border-color: #e0e4e8;
+  background: #fff;
+  color: #343a41;
+}
+
+.guided-agent__choices button[aria-pressed="true"],
+.guided-agent__regret-choices button[aria-pressed="true"],
+.execution-options__regret-switch button[aria-pressed="true"],
+.execution-option.is-selected {
+  border-color: #d0ae1a;
+  background: #fff9df;
+  color: #655000;
+}
+
+.execution-options__header {
+  background: linear-gradient(135deg, #fff9dc, #ffffff 62%);
+}
+
+.execution-options__review-line,
+.demo-order-sheet__confirm {
+  border-color: #f0c8cc;
+  background: #fff6f7;
+}
+
+.understood-concern {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.understood-concern > div,
+.agentic-loop-summary {
+  border: 1px solid #e0e4e8;
+  border-radius: 16px;
+  padding: 15px 17px;
+  background: #fff;
+}
+
+.understood-concern span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7b6a19;
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+
+.understood-concern strong {
+  color: #20242a;
+}
+
+.understood-concern p,
+.agentic-loop-summary p,
+.agentic-loop-summary small {
+  margin: 5px 0 0;
+  color: #68717a;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.agentic-loop-summary {
+  border-color: #e7d879;
+  background: #fffbed;
+}
+
+.position-coach-panel {
+  overflow: hidden;
+  border: 1px solid #e0e4e8;
+  border-radius: 18px;
+}
+
+.position-coach-panel__header,
+.position-coach-panel__form,
+.position-coach-panel__result {
+  padding: 18px;
+}
+
+.position-coach-panel__header {
+  position: relative;
+  border-bottom: 1px solid #e8ebee;
+  background: linear-gradient(145deg, #fff9dc, #fff);
+}
+
+.position-coach-panel__header p,
+.position-coach-panel__header h2 {
+  margin: 0;
+}
+
+.position-coach-panel__header h2 {
+  max-width: 280px;
+  margin-top: 5px;
+  color: #1e2227;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.position-coach-panel__header > p:last-child {
+  margin-top: 7px;
+  color: #666f79;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.position-coach-panel__eyebrow {
+  color: #7a6200;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.position-coach-panel__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  min-height: 34px !important;
+  border: 1px solid #dde1e5;
+  border-radius: 9px;
+  padding: 4px 9px;
+}
+
+.position-coach-panel__form,
+.position-coach-panel__result {
+  display: grid;
+  gap: 14px;
+}
+
+.position-coach-panel__field {
+  display: grid;
+  gap: 6px;
+  color: #3c434b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.position-coach-panel input,
+.position-coach-panel select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d9dee3;
+  border-radius: 10px;
+  padding: 8px 11px;
+  background: #fff;
+  color: #20242a;
+  font: inherit;
+}
+
+.position-coach-panel__input-with-unit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.position-coach-panel__choice-group {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.position-coach-panel__choice-group legend {
+  margin-bottom: 7px;
+  color: #3c434b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.position-coach-panel__choices {
+  display: grid;
+  gap: 7px;
+}
+
+.position-coach-panel__choices button,
+.position-coach-panel__plan-list button,
+.position-coach-panel__time-axis button {
+  min-height: 42px;
+  border: 1px solid #dce1e5;
+  border-radius: 11px;
+  padding: 9px 11px;
+  background: #fff;
+  color: #343a41;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.position-coach-panel__choices button[aria-pressed="true"],
+.position-coach-panel__plan-list button[aria-pressed="true"] {
+  border-color: #d0ae1a;
+  background: #fff9df;
+  color: #5f4c00;
+}
+
+.position-coach-panel__submit {
+  min-height: 46px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.position-coach-panel__error {
+  margin: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff0f1;
+  color: #a92c39;
+  font-size: 0.78rem;
+}
+
+.position-coach-panel__result {
+  border-top: 1px solid #e8ebee;
+  background: #f8f9fa;
+}
+
+.position-coach-panel__result section {
+  border: 1px solid #e0e4e8;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+
+.position-coach-panel__result h3,
+.position-coach-panel__result p,
+.position-coach-panel__result dl {
+  margin: 0;
+}
+
+.position-coach-panel__position[data-direction="gain"] h3 {
+  color: #c83243;
+}
+
+.position-coach-panel__position[data-direction="loss"] h3 {
+  color: #246caf;
+}
+
+.position-coach-panel__position dl {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.position-coach-panel__position dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+.position-coach-panel__review-lines,
+.position-coach-panel__plans,
+.position-coach-panel__order-style,
+.position-coach-panel__time-axis {
+  display: grid;
+  gap: 10px;
+}
+
+.position-coach-panel__review-lines article,
+.position-coach-panel__order-style article {
+  display: grid;
+  gap: 4px;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f6f7f8;
+}
+
+.position-coach-panel__line-alert {
+  border: 1px solid #efc7cc;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff3f4;
+  color: #9d2f3b;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.position-coach-panel__plan-list {
+  display: grid;
+  gap: 7px;
+}
+
+.position-coach-panel__plan-list button {
+  display: grid;
+  gap: 3px;
+}
+
+.position-coach-panel__order-style > div,
+.position-coach-panel__time-axis > div {
+  display: grid;
+  gap: 7px;
+}
+
+.position-coach-panel__order-book-limit,
+.position-coach-panel__time-axis {
+  color: #695900;
+}
+
+.position-coach-panel__time-axis {
+  border-color: #eadb8f !important;
+  background: #fffbed !important;
+}
+
+.demo-order-sheet__backdrop {
+  background: rgba(30, 35, 41, 0.42);
+}
+
+.demo-order-sheet__dialog,
+.demo-order-sheet__allocation,
+.demo-order-sheet__summary > div,
+.demo-order-sheet__completion-summary > div {
+  background: #fff;
+  color: #1d2024;
+}
+
+.demo-order-sheet__actions {
+  border-color: #e2e5e8;
+}
+
+.trade-demo-footer {
+  border-color: #dfe3e7;
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .trade-demo.is-agent-open .agent-rail {
+    background: #fff;
+    box-shadow: 0 -18px 44px rgba(31, 39, 48, 0.18);
+  }
+
+  .position-coach-panel {
+    max-height: min(86vh, 760px);
+    overflow-y: auto;
+    border-radius: 22px 22px 0 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .trade-cta-row {
+    grid-template-columns: 1fr;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .trade-cta {
+    min-height: 44px !important;
+  }
+
+  .understood-concern {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Light mode contrast guard: override the more-specific Phase 3.1 dark selectors. */
+.execution-options__header > div > span {
+  color: #765d00;
+}
+
+.execution-options__header p strong {
+  color: #5d4900;
+}
+
+.execution-option > button > span {
+  color: #765d00;
+}
+
+.execution-option > button h3,
+.execution-option > button > strong,
+.execution-option li strong {
+  color: #20262d;
+}
+
+.execution-option > button > small,
+.execution-option li span,
+.execution-option li small {
+  color: #586879;
+}
+
+.execution-option > p.execution-option__risk {
+  color: #963845;
+}
+
+.execution-options__counterfactual summary {
+  color: #665000;
+}
+
+.execution-options__counterfactual p,
+.execution-options__explanation span,
+.execution-options__review-line > span,
+.execution-options__explanation > small {
+  color: #596776;
+}
+
+.execution-options__explanation > button,
+.execution-options__ai-error button {
+  border-color: #d0ae1a;
+  background: #fff7c7;
+  color: #5c4900;
+}
+
+.execution-options__ai-error,
+.execution-options__review-line > strong {
+  color: #963845 !important;
+}
+
+/* AI companion affordance: keep the trading shell, make the agent role explicit. */
+.agent-ai-badge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #d3aa00;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #ffeb7a, #f8cf21);
+  color: #302700 !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.05em;
+  box-shadow: 0 7px 18px rgba(180, 140, 0, 0.16);
+}
+
+.agent-rail__identity,
+.guided-agent__identity,
+.position-coach-panel__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-rail__identity > span:nth-child(2),
+.guided-agent__identity > span:nth-child(2),
+.position-coach-panel__identity > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.agent-rail__identity strong,
+.guided-agent__identity strong,
+.position-coach-panel__identity strong {
+  color: #24272b;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.agent-rail__identity small,
+.guided-agent__identity small,
+.position-coach-panel__identity small {
+  color: #747c85;
+  font-size: 0.67rem;
+  line-height: 1.35;
+}
+
+.agent-rail__ready {
+  margin-left: auto;
+  border: 1px solid #e5d27d;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #fffbea;
+  color: #6d5900 !important;
+  font-size: 0.62rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+
+.agent-rail__empty h2 {
+  margin-top: 19px;
+}
+
+.agent-ai-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 19px;
+}
+
+.agent-ai-flow > span {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  border: 1px solid #e4e7ea;
+  border-radius: 12px;
+  padding: 10px 8px;
+  background: #f8f9fa;
+  color: #5e6670;
+  font-size: 0.66rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.agent-ai-flow > span:last-child {
+  border-color: #e7d16a;
+  background: #fff9dc;
+  color: #654f00;
+}
+
+.agent-ai-flow strong {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: #eceff2;
+  color: #4d555e;
+  font-size: 0.62rem;
+}
+
+.agent-ai-flow > span:last-child strong {
+  background: #f8cf21;
+  color: #312800;
+}
+
+.agent-entry-choices button {
+  position: relative;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.agent-entry-choices button:hover:not(:disabled),
+.agent-entry-choices button:focus-visible {
+  border-color: #d3af15;
+  background: #fff9df;
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(86, 73, 12, 0.09);
+}
+
+.agent-ai-boundary {
+  margin-top: 14px;
+  border-top: 1px solid #eceef0;
+  padding-top: 12px;
+}
+
+.agent-ai-boundary summary {
+  color: #665500;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+
+.agent-ai-boundary p {
+  margin-top: 8px;
+  color: #68717a;
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.guided-agent__header {
+  background: linear-gradient(145deg, #fff9dc, #ffffff 74%);
+}
+
+.guided-agent__header h2 {
+  margin-top: 12px;
+}
+
+.guided-agent__progress {
+  padding-top: 14px;
+}
+
+.guided-agent__progress span {
+  background: #e3e6e9;
+}
+
+.guided-agent__progress span.is-active {
+  background: #e7b900;
+}
+
+.guided-agent__conversation {
+  background: #fff;
+}
+
+.guided-agent__answer p,
+.guided-agent__reflection p,
+.guided-agent__question p {
+  color: #30363d;
+}
+
+.guided-agent__answer > span {
+  color: #657381;
+}
+
+.guided-agent__reflection > span,
+.guided-agent__question > span {
+  color: #715a00;
+}
+
+.guided-agent__question {
+  border-left-color: #e5b900;
+  background: #fffdf3;
+}
+
+.guided-agent__form {
+  border-top-color: #e6e9ec;
+  background: #fafbfc;
+}
+
+.guided-agent__field-stack label > span,
+.guided-agent__tolerance legend {
+  color: #3d454d;
+}
+
+.guided-agent__field-stack input {
+  border-color: #d8dde2;
+  background: #fff;
+  color: #1f2429;
+}
+
+.guided-agent__field-stack input:focus {
+  border-color: #c8a000;
+  box-shadow: 0 0 0 3px rgba(248, 207, 33, 0.2);
+}
+
+.guided-agent__regret-choices strong {
+  color: #282e34;
+}
+
+.guided-agent__regret-choices span,
+.guided-agent__tolerance p {
+  color: #69737d;
+}
+
+.guided-agent__actions > button:first-child:not(:last-child) {
+  border-color: #d8dde2;
+  background: #fff;
+  color: #49515a;
+}
+
+.guided-agent__actions > button:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.guided-agent__actions > button:last-child:disabled {
+  background: linear-gradient(90deg, #f8cf21, #ffec83, #f8cf21);
+  background-size: 220% 100%;
+  opacity: 0.9;
+  animation: agent-ai-processing 1.4s ease-in-out infinite;
+}
+
+.agent-ai-action-badge {
+  border-radius: 6px;
+  padding: 2px 5px;
+  background: rgba(49, 40, 0, 0.12);
+  color: #312800 !important;
+  font-size: 0.6rem !important;
+  font-weight: 900 !important;
+}
+
+.position-coach-panel__identity {
+  padding-right: 58px;
+}
+
+.position-coach-panel__header h2 {
+  margin-top: 14px;
+}
+
+@keyframes agent-ai-processing {
+  0% { background-position: 100% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-entry-choices button,
+  .guided-agent__actions > button:last-child:disabled {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .agent-ai-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-ai-flow > span {
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: center;
+  }
+}

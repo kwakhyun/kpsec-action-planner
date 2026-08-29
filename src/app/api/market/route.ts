@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import {
   createMarketView,
@@ -11,21 +10,14 @@ import {
   fetchMarketSnapshot,
   MarketDataError,
 } from "@/lib/market-data";
+import {
+  MARKET_NO_STORE_HEADERS,
+  MarketSymbolSchema,
+  marketFailureStatus,
+} from "@/server/market/route-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const NO_STORE_HEADERS = {
-  "Cache-Control": "no-store, max-age=0",
-};
-
-const SymbolSchema = z
-  .string()
-  .trim()
-  .toUpperCase()
-  .min(1)
-  .max(24)
-  .regex(/^[A-Z0-9.^=-]+$/);
 
 function friendlyFailure(code: MarketViewFailureCode): string {
   switch (code) {
@@ -53,20 +45,13 @@ function failureEnvelope(code: MarketViewFailureCode): MarketViewEnvelope {
   });
 }
 
-function failureStatus(code: MarketViewFailureCode): number {
-  if (code === "INVALID_SYMBOL") return 400;
-  if (code === "DATA_INSUFFICIENT") return 422;
-  if (code === "DATA_STALE") return 503;
-  return 502;
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const symbolResult = SymbolSchema.safeParse(url.searchParams.get("symbol"));
+  const symbolResult = MarketSymbolSchema.safeParse(url.searchParams.get("symbol"));
   if (!symbolResult.success) {
     return NextResponse.json(failureEnvelope("INVALID_SYMBOL"), {
       status: 400,
-      headers: NO_STORE_HEADERS,
+      headers: MARKET_NO_STORE_HEADERS,
     });
   }
 
@@ -80,7 +65,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(envelope, {
       status: 200,
-      headers: NO_STORE_HEADERS,
+      headers: MARKET_NO_STORE_HEADERS,
     });
   } catch (error: unknown) {
     const code: MarketViewFailureCode =
@@ -89,8 +74,8 @@ export async function GET(request: Request) {
         : "DATA_SCHEMA_FAILURE";
 
     return NextResponse.json(failureEnvelope(code), {
-      status: failureStatus(code),
-      headers: NO_STORE_HEADERS,
+      status: marketFailureStatus(code),
+      headers: MARKET_NO_STORE_HEADERS,
     });
   }
 }

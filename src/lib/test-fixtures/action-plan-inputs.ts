@@ -1,8 +1,5 @@
 import type { ActionPlanInput } from "@/lib/contracts";
 
-export const DEMO_NOTICE =
-  "회사명과 참고 정보는 모두 화면 체험을 위해 만든 가상 내용이며 실제 투자정보가 아닙니다.";
-
 export const DEMO_BASELINE: ActionPlanInput = {
   subjectLabel: "가상 A사",
   intent: "BUY",
@@ -52,19 +49,13 @@ export const DEMO_MISSING_INFO: ActionPlanInput = {
   userEvidence: [],
 };
 
-export const DEMO_INPUTS = {
-  baseline: DEMO_BASELINE,
-  counterfactual: DEMO_COUNTERFACTUAL,
-  missing: DEMO_MISSING_INFO,
-  insufficient: DEMO_MISSING_INFO,
-} as const;
-
 export function isSingleHorizonCounterfactual(
   baseline: ActionPlanInput = DEMO_BASELINE,
   counterfactual: ActionPlanInput = DEMO_COUNTERFACTUAL,
 ): boolean {
   const { horizon: baselineHorizon, ...baselineRest } = baseline;
-  const { horizon: counterfactualHorizon, ...counterfactualRest } = counterfactual;
+  const { horizon: counterfactualHorizon, ...counterfactualRest } =
+    counterfactual;
 
   return (
     baselineHorizon === "YEARS" &&

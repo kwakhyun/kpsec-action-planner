@@ -12,7 +12,7 @@ import {
   DEMO_COUNTERFACTUAL,
   DEMO_MISSING_INFO,
   isSingleHorizonCounterfactual,
-} from "@/lib/demo-inputs";
+} from "@/lib/test-fixtures/action-plan-inputs";
 import {
   finalizePlan,
   makeSafetyPause,

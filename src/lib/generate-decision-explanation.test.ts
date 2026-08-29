@@ -2,18 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { AgentDecisionExplanation } from "./decision-contracts";
-import { runOfflineDecisionDemo } from "./decision-demo";
 import {
   DecisionExplanationGuardError,
   validateDecisionExplanation,
 } from "./generate-decision-explanation";
 import { DECISION_EXPLANATION_SYSTEM_PROMPT } from "./decision-prompt";
+import { createDecisionFixture } from "./test-fixtures/decision-fixtures";
 
-const envelope = runOfflineDecisionDemo("BASELINE");
-if (!envelope.decision) {
-  throw new Error("TEST_FIXTURE_MISSING_DECISION");
-}
-const DECISION = envelope.decision;
+const DECISION = createDecisionFixture();
 
 const VALID_EXPLANATION: AgentDecisionExplanation = {
   understoodConcern:

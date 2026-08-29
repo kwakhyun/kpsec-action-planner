@@ -1,5 +1,5 @@
-import { ActionPlanner } from "@/components/action-planner";
+import { SecurityTradingDemo } from "@/components/security-trading-demo";
 
 export default function Home() {
-  return <ActionPlanner />;
+  return <SecurityTradingDemo />;
 }

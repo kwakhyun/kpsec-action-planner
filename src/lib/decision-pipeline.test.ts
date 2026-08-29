@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { AgentDecisionExplanation } from "./decision-contracts";
-import { DECISION_DEMO_BASELINE } from "./decision-demo";
+import { DECISION_INPUT_BASELINE } from "./test-fixtures/decision-fixtures";
 import { runLiveDecisionPipeline } from "./decision-pipeline";
 import { PlanGenerationError } from "./generate-plan";
 import {
@@ -68,14 +68,14 @@ function explanationFor(
 test("live pipeline succeeds with injected market and explanation dependencies", async () => {
   let fetchedSymbol = "";
   let explainCalls = 0;
-  const result = await runLiveDecisionPipeline(DECISION_DEMO_BASELINE, {
+  const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
     fetchMarket: async (symbol) => {
       fetchedSymbol = symbol;
       return MARKET;
     },
     explain: async ({ decision, input, market }) => {
       explainCalls += 1;
-      assert.deepEqual(input, DECISION_DEMO_BASELINE);
+      assert.deepEqual(input, DECISION_INPUT_BASELINE);
       assert.equal(market, MARKET);
       return {
         explanation: explanationFor(decision.preferredPlanId),
@@ -113,7 +113,7 @@ const MARKET_FAILURE_CODES: readonly MarketDataFailureCode[] = [
 for (const failureCode of MARKET_FAILURE_CODES) {
   test(`market ${failureCode} skips AI and returns no decision`, async () => {
     let explainCalls = 0;
-    const result = await runLiveDecisionPipeline(DECISION_DEMO_BASELINE, {
+    const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
       fetchMarket: async () => {
         throw new MarketDataError(failureCode);
       },
@@ -140,7 +140,7 @@ for (const failureCode of MARKET_FAILURE_CODES) {
 }
 
 test("AI failure preserves verified market and deterministic core without inheriting a fixture", async () => {
-  const result = await runLiveDecisionPipeline(DECISION_DEMO_BASELINE, {
+  const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
     fetchMarket: async () => MARKET,
     explain: async () => {
       throw new PlanGenerationError("TIMEOUT", {
@@ -174,7 +174,7 @@ for (const failureCode of [
   "NETWORK",
 ] as const) {
   test(`AI ${failureCode} remains distinct from market-data failure`, async () => {
-    const result = await runLiveDecisionPipeline(DECISION_DEMO_BASELINE, {
+    const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
       fetchMarket: async () => MARKET,
       explain: async () => {
         throw new PlanGenerationError("UPSTREAM_ERROR", {

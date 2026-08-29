@@ -6,7 +6,10 @@ import {
   diffInputSnapshots,
   isExactlyOneFieldDifferent,
 } from "./counterfactual";
-import { DEMO_BASELINE, DEMO_COUNTERFACTUAL } from "./demo-inputs";
+import {
+  DEMO_BASELINE,
+  DEMO_COUNTERFACTUAL,
+} from "./test-fixtures/action-plan-inputs";
 
 test("pure input diff finds the exact horizon leaf and snapshot values", () => {
   assert.deepEqual(diffInputSnapshots(DEMO_BASELINE, DEMO_COUNTERFACTUAL), [

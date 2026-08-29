@@ -4,6 +4,16 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import type { DemoOrderSidecar } from "@/lib/demo-order-sidecar";
 import type { ExecutionPlan } from "@/lib/execution-core";
+import {
+  ALLOCATION_CONDITION_LABELS,
+  EMPTY_PRACTICE_CHECKS,
+  focusableElements,
+  formatOrderDateTime as formatDateTime,
+  formatOrderKrw as formatKrw,
+  PLAN_LABELS,
+  type PracticeChecks,
+  type SheetView,
+} from "./demo-order-sheet-model";
 
 export type DemoOrderSheetProps = {
   open: boolean;
@@ -14,52 +24,6 @@ export type DemoOrderSheetProps = {
   onSimulatedComplete?: (plan: ExecutionPlan) => void;
 };
 
-type SheetView = "PREVIEW" | "CONFIRM" | "COMPLETE";
-
-type PracticeChecks = {
-  planValues: boolean;
-  marketTime: boolean;
-  demoBoundary: boolean;
-};
-
-const EMPTY_PRACTICE_CHECKS: PracticeChecks = {
-  planValues: false,
-  marketTime: false,
-  demoBoundary: false,
-};
-
-const PLAN_LABELS: Record<ExecutionPlan["id"], string> = {
-  ONE_SHOT: "한 번에 확인하는 계획",
-  STAGED_2: "두 번으로 나누는 계획",
-  STAGED_3: "세 번으로 나누는 계획",
-};
-
-const ALLOCATION_CONDITION_LABELS: Record<
-  ExecutionPlan["allocations"][number]["condition"],
-  string
-> = {
-  INITIAL_REVIEW: "첫 회차를 검토할 때",
-  RECHECK_REQUIRED: "새 가격과 중단 조건을 다시 확인한 뒤",
-};
-
-function formatKrw(value: number): string {
-  return `${new Intl.NumberFormat("ko-KR").format(Math.round(value))}원`;
-}
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "확인할 수 없음";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "확인할 수 없음";
-  return date.toLocaleString("ko-KR");
-}
-
-function focusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ),
-  ).filter((element) => !element.hasAttribute("hidden"));
-}
 
 export function DemoOrderSheet({
   open,
