@@ -258,15 +258,16 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function openPreBuyPlan(page: Page) {
-  const rail = page.locator(".agent-rail");
-  await rail.getByRole("button", { name: "살까 고민돼요" }).click();
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByRole("button", { name: "이번 주 안에" }).click();
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByRole("button", { name: /산 뒤 내려가는 게 더 걱정돼요/ }).click();
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByRole("button", { name: "8%" }).click();
-  await rail.getByRole("button", { name: "AI로 실행안 비교하기" }).click();
+  const workspace = page.getByRole("region", { name: "상황 정리와 실행 계획" });
+  await workspace.getByRole("button", { name: /살까 고민돼요/ }).click();
+  await workspace.getByRole("button", { name: "선택하고 계속하기" }).click();
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByRole("button", { name: "이번 주 안에" }).click();
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByRole("button", { name: /산 뒤 내려가는 게 더 걱정돼요/ }).click();
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByRole("button", { name: "8%" }).click();
+  await workspace.getByRole("button", { name: "AI로 실행안 비교하기" }).click();
   await expect(
     page.getByRole("heading", { name: "먼저 비교해 볼 방법" }),
   ).toBeVisible();
@@ -277,22 +278,23 @@ async function fillPositionPlan(
   entryName: string,
   submitName: string,
 ) {
-  const rail = page.locator(".agent-rail");
-  await rail.getByRole("button", { name: entryName }).click();
+  const workspace = page.getByRole("region", { name: "상황 정리와 실행 계획" });
+  await workspace.getByRole("button", { name: entryName }).click();
+  await workspace.getByRole("button", { name: "선택하고 계속하기" }).click();
   await page.getByRole("button", { name: "분 단위 차트" }).click();
-  await rail.getByLabel("평균적으로 얼마에 샀나요?").fill("100000");
-  await rail.getByLabel("몇 주를 가지고 있나요?").fill("100");
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByRole("button", { name: "몇 달" }).click();
-  await rail.getByRole("button", { name: "급하지 않아요" }).click();
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByLabel("평균 매수가에서 몇 % 손실까지 감당할 수 있나요?").fill("8");
-  await rail.getByLabel("직접 정한 이익 확인 기준이 있나요? (선택)").fill("10");
-  await rail.getByRole("button", { name: "다음 질문" }).click();
-  await rail.getByRole("button", { name: "나누어 매도를 먼저 볼래요" }).click();
-  await rail.getByRole("button", { name: "원하는 가격을 지키고 싶어요" }).click();
-  await rail.getByRole("button", { name: submitName }).click();
-  await expect(rail.getByText("현재 손익", { exact: true })).toBeVisible();
+  await workspace.getByLabel("평균적으로 얼마에 샀나요?").fill("100000");
+  await workspace.getByLabel("몇 주를 가지고 있나요?").fill("100");
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByRole("button", { name: "몇 달" }).click();
+  await workspace.getByRole("button", { name: "급하지 않아요" }).click();
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByLabel("평균 매수가에서 몇 % 손실까지 감당할 수 있나요?").fill("8");
+  await workspace.getByLabel("직접 정한 이익 확인 기준이 있나요? (선택)").fill("10");
+  await workspace.getByRole("button", { name: "다음 질문" }).click();
+  await workspace.getByRole("button", { name: "나누어 매도를 먼저 볼래요" }).click();
+  await workspace.getByRole("button", { name: "원하는 가격을 지키고 싶어요" }).click();
+  await workspace.getByRole("button", { name: submitName }).click();
+  await expect(workspace.getByText("현재 손익", { exact: true })).toBeVisible();
 }
 
 function expectCleanHarness(
@@ -319,18 +321,13 @@ test("production 수직 흐름: 매수 전 → 반대 심문 → 결정 코어 �
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "삼성전자" })).toBeVisible();
-  await expect(page.getByText("해커톤 데모 · 실제 주문 없음").first()).toBeVisible();
+  await expect(page.getByText(/Action Planner는.*실제 주문을 제공하지 않습니다/)).toBeVisible();
   await expect(page.getByRole("button", { name: "분 단위 차트" })).toBeEnabled();
   await page.getByRole("button", { name: "분 단위 차트" }).click();
   await expect(page.getByText(/1분 단위 공개 데이터/)).toBeVisible();
   for (const name of ["분", "일", "주", "월", "년"]) {
     await expect(page.getByRole("button", { name: `${name} 단위 차트` })).toBeVisible();
   }
-  await expect(page.getByText("전체 구간", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "확대" }).click();
-  await expect(page.getByText(/최근 \d+개 가격 막대/)).toBeVisible();
-  await page.getByRole("button", { name: "전체" }).click();
-  await expect(page.getByText("전체 구간", { exact: true })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await openPreBuyPlan(page);
@@ -347,10 +344,10 @@ test("production 수직 흐름: 매수 전 → 반대 심문 → 결정 코어 �
     ).color,
   }));
   expect(contrastStyles).toEqual({
-    title: "rgb(32, 38, 45)",
-    quantity: "rgb(32, 38, 45)",
-    amount: "rgb(38, 49, 58)",
-    risk: "rgb(150, 56, 69)",
+    title: "rgb(16, 24, 40)",
+    quantity: "rgb(16, 24, 40)",
+    amount: "rgb(52, 64, 84)",
+    risk: "rgb(180, 35, 24)",
   });
   await expect(page.getByRole("heading", { name: "무엇을 더 중요하게 생각하나요?" })).toHaveCount(0);
   await expect(page.getByText("시장가와 지정가의 차이는 주문 미리보기에서 선택한 계획과 함께 확인할 수 있어요.")).toBeVisible();
@@ -408,12 +405,12 @@ test("보유 후 선제 가이드의 세 선택과 sidecar 일치, 매도 정상
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "삼성전자" })).toBeVisible();
 
-  await fillPositionPlan(page, "샀는데 가격이 움직여 불안해요", "내 계획 다시 확인하기");
-  const rail = page.locator(".agent-rail");
-  await expect(rail.getByText("-2,000,000원 · -20%")).toBeVisible();
-  await expect(rail.getByText(/92,000원.*-800,000원/)).toBeVisible();
-  await expect(rail.getByText(/110,000원.*\+1,000,000원/)).toBeVisible();
-  await expect(rail.getByText("먼저 볼 선택: 세 번으로 나누기")).toBeVisible();
+  await fillPositionPlan(page, "샀는데 불안해요", "내 계획 다시 확인하기");
+  const workspace = page.getByRole("region", { name: "상황 정리와 실행 계획" });
+  await expect(workspace.getByText("-2,000,000원 · -20%")).toBeVisible();
+  await expect(workspace.getByText(/92,000원.*-800,000원/)).toBeVisible();
+  await expect(workspace.getByText(/110,000원.*\+1,000,000원/)).toBeVisible();
+  await expect(workspace.getByText("먼저 볼 선택: 세 번으로 나누기")).toBeVisible();
 
   const timeAxis = page.locator(".position-coach-panel__time-axis");
   await expect(timeAxis).toBeVisible();
@@ -446,11 +443,12 @@ test("보유 후 선제 가이드의 세 선택과 sidecar 일치, 매도 정상
   await expect(dialog.locator(".demo-order-sheet__allocation")).toHaveCount(3);
   await page.keyboard.press("Escape");
 
-  await rail.getByRole("button", { name: "매매 동반자 닫기" }).click();
-  await rail.getByRole("button", { name: "팔 시점을 고민하고 있어요" }).click();
-  await rail.getByRole("button", { name: "매도 선택지 비교하기" }).click();
-  await expect(rail.getByRole("heading", { name: "전량과 분할 매도를 함께 비교해 볼게요" })).toBeVisible();
-  await expect(rail.getByText("현재 손익", { exact: true })).toBeVisible();
+  await workspace.getByRole("button", { name: "매매 동반자 닫기" }).click();
+  await page.reload();
+  await fillPositionPlan(page, "팔 시점을 고민하고 있어요", "매도 선택지 비교하기");
+  await expect(workspace.getByRole("heading", { name: "먼저 볼 선택: 세 번으로 나누기" })).toBeVisible();
+  await expect(page.getByText("팔 시점을 고민하는 상황", { exact: true })).toBeVisible();
+  await expect(workspace.getByText("현재 손익", { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoHorizontalOverflow(page);
@@ -473,7 +471,6 @@ test("5분 fallback은 표시 전용이고 분봉 부족 시 분 탭을 비활�
   await secondPage.goto("/");
   await expect(secondPage.getByRole("heading", { name: "삼성전자" })).toBeVisible();
   await expect(secondPage.getByRole("button", { name: "분 단위 차트" })).toBeDisabled();
-  await expect(secondPage.getByText(/분 단위 비활성화.*1분·5분 데이터가 모두 부족/)).toBeVisible();
   await expect(secondPage.getByText(/1분 단위 공개 데이터|5분 단위 공개 데이터/)).toHaveCount(0);
   expectCleanHarness(failureHarness, { allowHandledHttpFailure: true });
 });

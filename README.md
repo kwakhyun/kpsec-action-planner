@@ -55,7 +55,7 @@ Action Planner는 답을 대신 정하는 추천기가 아닙니다. 사용자�
 
 ### 3. AI와 계산의 책임을 분리합니다
 
-AI는 다음 질문을 고르고, 실행안의 차이와 반대 의견을 초보자 언어로 설명합니다. 가격, 수량, 회차별 금액, 평가손익, 다시 확인할 가격과 중단 조건은 검증된 입력을 바탕으로 계획 계산기만 만듭니다.
+가이드 질문과 단계 이동은 제품 코드가 정해진 순서로 관리합니다. AI는 실행안의 차이를 쉬운 말로 풀고, 검증된 사실 범위 안에서 반대 의견과 후속 확인 질문을 만듭니다. 가격, 수량, 회차별 금액, 평가손익, 다시 확인할 가격과 중단 조건은 검증된 입력을 바탕으로 계획 계산기만 만듭니다.
 
 ## 데이터에서 화면까지
 
@@ -93,7 +93,7 @@ flowchart LR
 | --- | --- | --- |
 | Yahoo 어댑터 | 공개 OHLCV 조회, 출처·기준시각 보존 | 가격 추정, 누락값 생성 |
 | 계획 계산기 | 수량·금액·회차, 평가손익, 다시 확인할 가격, 중단 조건 계산 | 미래 가격·수익 예측 |
-| OpenAI | 질문 선택, 장단점 설명, 검증된 사실에 근거한 다른 관점 제시 | 새로운 숫자·시장 사실 생성, 계산값 변경 |
+| OpenAI | 실행안 설명, 검증된 사실에 근거한 반대 의견과 후속 확인 질문 제시 | 가이드 단계 결정, 새로운 숫자·시장 사실 생성, 계산값 변경 |
 | 주문 전 체크리스트 | 선택한 계획과 데이터 시각을 다시 확인하는 연습 | 계좌 연결, 주문 전송, 모의 체결 성과 생성 |
 
 ## 실패할 때의 동작
@@ -123,7 +123,7 @@ flowchart LR
 - Zod: 입력, 외부 데이터, AI Structured Output 검증
 - OpenAI Responses API: `store: false`, 서버 전용 호출
 - Recharts: OHLCV 캔들, 거래량, 가격 평균선과 계획 표시
-- Vitest, Playwright, ESLint
+- Node.js 내장 테스트 러너, Playwright, ESLint
 - Vercel: 프로덕션 배포
 
 ## 로컬 실행
@@ -141,7 +141,7 @@ AI 기능을 사용하려면 서버 전용 환경변수를 로컬에 설정합�
 
 ```dotenv
 OPENAI_API_KEY=
-OPENAI_MODEL=
+OPENAI_MODEL=gpt-5.6
 ```
 
 주요 검증 명령은 다음과 같습니다.
@@ -158,27 +158,35 @@ npm run test:e2e
 
 ## 검증 현황
 
+아래 결과는 2026-08-30 현재 로컬 작업 트리에서 다시 실행한 기준입니다. 외부 서비스 상태와 프로덕션 배포 최신 여부는 로컬 검증과 분리해서 확인합니다.
+
 | 항목 | 최근 확인 결과 |
 | --- | --- |
-| 단위 테스트 | 89개 통과 |
+| 단위 테스트 | 78개 통과 |
 | TypeScript | 통과 |
 | ESLint | 통과 |
 | 프로덕션 빌드 | 통과 |
-| 배포 상태 | Vercel Ready, 배포 URL HTTP 200 |
-| 브라우저 수동 확인 | 메인 화면, 보유 후 분 차트 가이드, 주문 전 체크리스트, 콘솔 오류 없음 |
-| Chromium E2E | Phase 3.3 기준선 3개 시나리오 통과. 이후 UI 문구·체크리스트 변경분은 전체 재실행 필요 |
-| OpenAI LIVE smoke | 최종 검증 기준선에서 공개·비식별 입력 1회 성공. 이후 prompt·schema·LIVE route는 변경하지 않음 |
+| Chromium E2E | 3개 시나리오 통과 |
+| 공개 배포 주소 | `https://kpsec-action-planner.vercel.app` |
+| OpenAI LIVE smoke | 일반 검증에 포함하지 않으며 명시적으로 허용한 경우에만 별도 실행 |
 
 검증 결과는 기능이 의도한 계약대로 동작한다는 근거입니다. 합성 시나리오나 테스트가 투자 성과, 사용자 효용, 정확도 향상 또는 준법 적합성을 입증하지는 않습니다.
 
+검증 범위와 한계는 [`design-qa.md`](./design-qa.md)에 정리했습니다.
+
 ## 주요 코드
 
-- [`src/components/security-trading-demo.tsx`](./src/components/security-trading-demo.tsx): 종목 화면과 전체 사용자 흐름
-- [`src/components/security-candlestick-chart.tsx`](./src/components/security-candlestick-chart.tsx): 분·일·주·월·년 차트와 시간축 가이드 연결
-- [`src/components/guided-trade-agent.tsx`](./src/components/guided-trade-agent.tsx): 가이드형 대화와 계획 비교
-- [`src/lib/market-data.ts`](./src/lib/market-data.ts), [`src/lib/intraday-market.ts`](./src/lib/intraday-market.ts): Yahoo Finance 일 단위·분 단위 조회와 검증
+- [`src/components/security-trading-demo.tsx`](./src/components/security-trading-demo.tsx): 화면 상태와 사용자 흐름을 조정하는 컨트롤러
+- [`src/components/security-trading-demo-view.tsx`](./src/components/security-trading-demo-view.tsx): 종목, 계획, 주문 전 확인 화면을 조합하는 뷰
+- [`src/components/security-decision-workspace.tsx`](./src/components/security-decision-workspace.tsx): 고민 선택, 가이드 입력, 보유 후 재확인 흐름
+- [`src/components/security-candlestick-chart.tsx`](./src/components/security-candlestick-chart.tsx): 분·일·주·월·년 차트의 데이터와 표시 상태 연결
+- [`src/components/guided-trade-agent.tsx`](./src/components/guided-trade-agent.tsx): 매수 전 고정 질문 단계와 입력 검증
+- [`src/lib/market-data.ts`](./src/lib/market-data.ts): 일 단위 Yahoo Finance 조회, 스키마 검증과 시장 지표 계산
+- [`src/lib/intraday-market.ts`](./src/lib/intraday-market.ts): 분 단위 데이터 계약과 응답 스키마
+- [`src/server/market/intraday-market-provider.ts`](./src/server/market/intraday-market-provider.ts), [`src/server/market/chart-history-provider.ts`](./src/server/market/chart-history-provider.ts): 분 단위·장기 Yahoo Finance 서버 조회
 - [`src/lib/execution-core.ts`](./src/lib/execution-core.ts): 매수 전 실행안 계산
 - [`src/lib/trade-coach-core.ts`](./src/lib/trade-coach-core.ts): 보유 후·매도 재확인 계획
+- [`src/app/api/decision/route.ts`](./src/app/api/decision/route.ts): 검증된 실행안의 AI 설명 API 경계
 - [`src/app/api/adversarial-review/route.ts`](./src/app/api/adversarial-review/route.ts): AI 다른 관점 API 경계
 - [`src/lib/demo-order-sidecar.ts`](./src/lib/demo-order-sidecar.ts): 실제 주문과 분리된 sidecar 계약
 

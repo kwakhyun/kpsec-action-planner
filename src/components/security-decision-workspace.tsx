@@ -99,7 +99,21 @@ export function SecurityDecisionWorkspace({
 
   return (
     <section className="studio-decision" aria-label="상황 정리와 실행 계획">
-      {planVisible && selectedPlan ? (
+      {agentOpen && (concern === "HOLDING_ANXIETY" || concern === "SELL_TIMING") ? (
+        <PositionCoachPanel
+          key={concern}
+          concern={concern}
+          value={positionDraft}
+          result={positionCoach}
+          disabled={false}
+          hideTimeAxis={timeAxisDismissed}
+          errorMessage={agentError}
+          onChange={onPositionDraftChange}
+          onSubmit={onPositionSubmit}
+          onClose={onCloseAgent}
+          onTimeAxisAction={onTimeAxisAction}
+        />
+      ) : planVisible && selectedPlan ? (
         <aside
           className="agent-complete studio-complete"
           aria-labelledby="agent-complete-title"
@@ -142,34 +156,18 @@ export function SecurityDecisionWorkspace({
           </small>
         </aside>
       ) : agentOpen ? (
-        concern === "HOLDING_ANXIETY" || concern === "SELL_TIMING" ? (
-          <PositionCoachPanel
-            key={concern}
-            concern={concern}
-            value={positionDraft}
-            result={positionCoach}
-            disabled={false}
-            hideTimeAxis={timeAxisDismissed}
-            errorMessage={agentError}
-            onChange={onPositionDraftChange}
-            onSubmit={onPositionSubmit}
-            onClose={onCloseAgent}
-            onTimeAxisAction={onTimeAxisAction}
-          />
-        ) : (
-          <GuidedTradeAgent
-            open={agentOpen}
-            input={input}
-            step={step}
-            completedSteps={completedSteps}
-            loading={aiState === "LOADING"}
-            errorMessage={agentError}
-            onInputChange={onInputChange}
-            onContinue={onContinueConversation}
-            onBack={onGoBack}
-            onClose={onCloseAgent}
-          />
-        )
+        <GuidedTradeAgent
+          open={agentOpen}
+          input={input}
+          step={step}
+          completedSteps={completedSteps}
+          loading={aiState === "LOADING"}
+          errorMessage={agentError}
+          onInputChange={onInputChange}
+          onContinue={onContinueConversation}
+          onBack={onGoBack}
+          onClose={onCloseAgent}
+        />
       ) : (
         <div className="studio-decision__start">
           <div className="studio-mobile-quote" aria-label="선택한 종목 요약">
