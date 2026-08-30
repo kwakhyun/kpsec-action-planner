@@ -18,7 +18,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "next": "16.3.3",
     "openai": "6.48.0",
-    "react": "19.2.7",
+    "react": "19.2.8",
     "react-dom": "19.2.7",
     "recharts": "^3.9.2",
     "server-only": "0.0.1",
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@playwright/test": "1.61.1",
     "@types/node": "26.1.1",
-    "@types/react": "19.2.17",
+    "@types/react": "19.2.18",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.3",
