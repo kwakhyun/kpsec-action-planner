@@ -1,4 +1,4 @@
-/* Phase 3.2 — light securities workspace. Existing layout rules stay intact. */
+/* Shell layer: securities workspace tokens and page structure. */
 .trade-demo {
   /* Consolidated from three previously-duplicated declarations (light/dark/light
      re-skin layers). --chart-* vars were dropped: their only consumer,
@@ -264,7 +264,7 @@
   }
 }
 
-/* Phase 3.1 — single-security trading companion */
+/* Single-security trading workspace components. */
 
 .trade-demo button,
 .trade-demo input,

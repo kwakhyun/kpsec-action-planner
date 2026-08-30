@@ -11,7 +11,7 @@ import {
   type AdversarialReviewResult,
 } from "@/lib/adversarial-review-contracts";
 
-import "./adversarial-review-agent.css";
+import styles from "./adversarial-review-agent.module.css";
 
 type QuickAnswer = {
   key: AdversarialAnswerKey;
@@ -125,6 +125,9 @@ function AdversarialReviewSession({
         cache: "no-store",
         signal: controller.signal,
       });
+      if (response.status === 429) {
+        throw new Error("잠시 요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요.");
+      }
       const payload: unknown = await response.json();
       const parsed = AdversarialReviewEnvelopeSchema.safeParse(payload);
       if (requestIdRef.current !== requestId) return;
@@ -158,6 +161,8 @@ function AdversarialReviewSession({
       setMessage(
         error instanceof DOMException && error.name === "AbortError"
           ? "AI 응답이 늦어 새 반대 의견을 만들지 않았습니다."
+          : error instanceof Error
+            ? error.message
           : "네트워크에 연결하지 못해 새 반대 의견을 만들지 않았습니다.",
       );
     } finally {
@@ -193,10 +198,12 @@ function AdversarialReviewSession({
 
   return (
     <section className={className} aria-labelledby="adversarial-review-title">
-      <div className="challenge-card">
+      <div className={styles.challengeCard}>
         <div>
-          <div className="challenge-ai-identity">
-            <span className="challenge-ai-badge" aria-hidden="true">AI</span>
+          <div className={styles.challengeAiIdentity}>
+            <span className={styles.challengeAiBadge} aria-hidden="true">
+              AI
+            </span>
             <span>
               <strong>AI 다른 관점</strong>
               <small>
@@ -208,11 +215,11 @@ function AdversarialReviewSession({
               </small>
             </span>
           </div>
-          <p className="challenge-eyebrow">한 번 더 생각해 보기</p>
+          <p className={styles.challengeEyebrow}>한 번 더 생각해 보기</p>
           <h3 id="adversarial-review-title">
             이 계획의 반대 의견도 들어볼까요?
           </h3>
-          <p className="challenge-intro">
+          <p className={styles.challengeIntro}>
             확인된 시장 정보와 지금 입력한 조건만 사용합니다. AI는 계획을
             직접 바꾸지 않습니다.
           </p>
@@ -220,15 +227,17 @@ function AdversarialReviewSession({
 
         <button
           type="button"
-          className="challenge-cta btn btn--primary"
+          className={`${styles.challengeCta} btn btn--primary`}
           onClick={requestReview}
           disabled={!request || disabled || loadState === "LOADING"}
         >
-          {loadState === "LOADING" ? "반대 의견을 확인하고 있어요…" : "이 계획의 반대 의견도 들어볼까요?"}
+          {loadState === "LOADING"
+            ? "반대 의견을 확인하고 있어요…"
+            : "이 계획의 반대 의견도 들어볼까요?"}
         </button>
 
         {loadState === "LOADING" ? (
-          <div className="challenge-thinking" role="status">
+          <div className={styles.challengeThinking} role="status">
             <span aria-hidden="true">AI</span>
             <p>시장 정보와 내 조건에서 놓친 가정을 확인하고 있어요.</p>
           </div>
@@ -236,38 +245,50 @@ function AdversarialReviewSession({
 
         <div aria-live="polite" aria-atomic="true">
           {loadState === "FAILURE" && message ? (
-            <div className="challenge-message challenge-message--error" role="alert">
+            <div
+              className={`${styles.challengeMessage} ${styles.challengeMessageError}`}
+              role="alert"
+            >
               <strong>새 의견을 사용하지 않았어요</strong>
               <span>{message}</span>
             </div>
           ) : null}
 
           {result ? (
-            <div className="challenge-result">
+            <div className={styles.challengeResult}>
               <div>
-                <p className="challenge-section-label">가장 강한 반대 의견</p>
-                <ol className="challenge-list">
+                <p className={styles.challengeSectionLabel}>
+                  가장 강한 반대 의견
+                </p>
+                <ol className={styles.challengeList}>
                   {result.counterarguments.map((item, index) => (
                     <li key={`${item.argument}-${index}`}>
                       <p>{item.argument}</p>
                       <small>
-                        확인한 근거: {item.factIds.map((id) => factLabels.get(id) ?? "확인된 시장 정보").join(", ")}
+                        확인한 근거:{" "}
+                        {item.factIds
+                          .map((id) => factLabels.get(id) ?? "확인된 시장 정보")
+                          .join(", ")}
                       </small>
                     </li>
                   ))}
                 </ol>
               </div>
 
-              <div className="challenge-assumption">
-                <p className="challenge-section-label">아직 확인하지 않은 가정</p>
+              <div className={styles.challengeAssumption}>
+                <p className={styles.challengeSectionLabel}>
+                  아직 확인하지 않은 가정
+                </p>
                 <p>{result.unverifiedAssumption}</p>
               </div>
 
-              <div className="challenge-question">
-                <p className="challenge-section-label">계획을 다시 비교할 질문</p>
+              <div className={styles.challengeQuestion}>
+                <p className={styles.challengeSectionLabel}>
+                  계획을 다시 비교할 질문
+                </p>
                 <strong>{result.question}</strong>
                 <p>{result.whatWouldChangePlan}</p>
-                <div className="challenge-answers" aria-label="빠른 답변">
+                <div className={styles.challengeAnswers} aria-label="빠른 답변">
                   {QUICK_ANSWERS[result.questionKey].map((answer) => (
                     <button
                       type="button"
@@ -285,13 +306,12 @@ function AdversarialReviewSession({
           ) : null}
 
           {loadState !== "FAILURE" && message ? (
-            <div className="challenge-message" role="status">
+            <div className={styles.challengeMessage} role="status">
               {message}
             </div>
           ) : null}
         </div>
       </div>
-
     </section>
   );
 }

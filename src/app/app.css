@@ -1,0 +1,16 @@
+/*
+ * Global style architecture
+ *
+ * The layer order is the public contract. Each source file owns one concern,
+ * and later visual polish can override foundations without relying on the
+ * incidental order in which Next.js emits component chunks.
+ */
+@layer foundation, shell, guided-flow, plan-results, theme, refinements, production;
+
+@import "./globals.css" layer(foundation);
+@import "./trading-shell.css" layer(shell);
+@import "./guided-planning-flow.css" layer(guided-flow);
+@import "./plan-results.css" layer(plan-results);
+@import "./light-theme.css" layer(theme);
+@import "./planner-refinements.css" layer(refinements);
+@import "./production-ui.css" layer(production);

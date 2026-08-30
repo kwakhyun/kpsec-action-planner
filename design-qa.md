@@ -9,11 +9,12 @@
 
 | 검증 항목 | 명령 또는 근거 | 결과 |
 | --- | --- | --- |
-| 단위 테스트 | `npm test` | 78개 통과 |
+| 단위 테스트 | `npm test` | 61개 통과 |
 | TypeScript | `npm run typecheck` | 통과 |
 | ESLint | `npm run lint` | 통과 |
 | 프로덕션 빌드 | `npm run build` | 통과 |
-| Chromium E2E | `npm run test:e2e` | 3개 통과 |
+| Chromium E2E | `npm run test:e2e` | 4개 통과 |
+| 의존성 감사 | `npm audit --audit-level=high` | 취약점 0건 |
 
 현재 로컬 품질 인증 결과는 통과입니다.
 
@@ -24,6 +25,7 @@
 1. 매수 전 고민 입력, 실행안 비교, AI 반대 의견, 결정 코어 재계산, 주문 전 체크리스트
 2. 보유 후 시간축 가이드의 세 선택, 주문 sidecar 일치, 매도 계획 정상 경로, 390px 화면의 가로 넘침 방지
 3. 1분 데이터가 부족할 때 5분 데이터로 대체하고, 두 데이터가 모두 부족하면 분 단위 차트를 비활성화하는 흐름
+4. 존재하지 않는 주소에서 전용 404 화면과 종목 화면 복귀 동선을 제공하는 흐름
 
 브라우저 검증은 1440px 데스크톱과 390px 모바일 뷰포트를 포함합니다. 실행안 제목, 수량, 금액, 위험 문구의 실제 계산 색상도 현재 프로덕션 토큰과 일치하는지 확인합니다.
 
@@ -62,7 +64,12 @@
 | 보유 후와 매도 계획 계산 | [`src/lib/trade-coach-core.ts`](./src/lib/trade-coach-core.ts) |
 | AI 설명 경계 | [`src/app/api/decision/route.ts`](./src/app/api/decision/route.ts) |
 | AI 반대 의견 경계 | [`src/app/api/adversarial-review/route.ts`](./src/app/api/adversarial-review/route.ts) |
+| 공개 AI 요청 공통 검증 | [`src/server/public-api-request.ts`](./src/server/public-api-request.ts) |
+| OpenAI 오류 정규화 | [`src/lib/openai-generation-error.ts`](./src/lib/openai-generation-error.ts) |
 | 주문 연습 계약 | [`src/lib/demo-order-sidecar.ts`](./src/lib/demo-order-sidecar.ts) |
+| 전역 스타일 계층 | [`src/app/app.css`](./src/app/app.css) |
+| 오류와 404 복구 | [`src/app/error.tsx`](./src/app/error.tsx), [`src/app/global-error.tsx`](./src/app/global-error.tsx), [`src/app/not-found.tsx`](./src/app/not-found.tsx) |
+| 자동 품질 게이트 | [`.github/workflows/quality-gate.yml`](./.github/workflows/quality-gate.yml) |
 
 ## 증빙 관리 원칙
 
@@ -77,9 +84,11 @@
 - E2E는 외부 요청을 테스트 응답으로 대체하므로 Yahoo Finance와 OpenAI의 현재 가용성을 인증하지 않습니다.
 - OpenAI LIVE smoke는 비용과 외부 호출을 동반하므로 일반 검증에 포함하지 않습니다.
 - 로컬 빌드와 E2E 통과는 공개 배포가 최신 커밋인지 보장하지 않습니다. 배포 검증은 배포 작업에서 별도로 확인합니다.
+- Vercel Firewall과 Deployment Checks는 저장소 밖의 운영 설정이므로 코드 검증과 게시 상태를 각각 확인합니다.
 - 이 검증은 투자 성과, 금융 규제 적합성, 실제 사용자 효용을 입증하지 않습니다.
 
 ## 변경 기록
 
 - 2026-08-29: Planning Studio 중심의 전체 화면 디자인을 적용했습니다.
 - 2026-08-30: 리팩터링된 책임 구조에 맞춰 문서를 갱신하고, 현재 UI 기준으로 E2E 선택자와 보유 후 시간축 가이드 렌더링을 정렬했습니다.
+- 2026-08-30: Next.js 보안 업데이트, 공개 AI 요청 검증, 레거시 계획 API 제거, 명시적 CSS 계층, 오류 복구 화면, CI와 의존성 감사를 추가했습니다.

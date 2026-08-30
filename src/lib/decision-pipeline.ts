@@ -17,12 +17,12 @@ import {
   DecisionExplanationGuardError,
   generateDecisionExplanation,
 } from "@/lib/generate-decision-explanation";
-import { PlanGenerationError } from "@/lib/generate-plan";
 import {
   fetchMarketSnapshot,
   MarketDataError,
   type MarketSnapshot,
 } from "@/lib/market-data";
+import { OpenAiGenerationError } from "@/lib/openai-generation-error";
 
 type PipelineDependencies = {
   fetchMarket: (symbol: string) => Promise<MarketSnapshot>;
@@ -126,7 +126,7 @@ function aiFailureMessage(code: DecisionFailureCode): string {
 
 function classifiedAiFailureCode(error: unknown): DecisionFailureCode {
   if (error instanceof DecisionExplanationGuardError) return "SEMANTIC_GUARD";
-  if (!(error instanceof PlanGenerationError)) return "UPSTREAM_ERROR";
+  if (!(error instanceof OpenAiGenerationError)) return "UPSTREAM_ERROR";
   if (error.code !== "UPSTREAM_ERROR") return error.code;
 
   switch (error.liveSmokeCategory) {
@@ -278,7 +278,7 @@ export async function runLiveDecisionPipeline(
     const code = classifiedAiFailureCode(error);
     const requestedModel =
       error instanceof DecisionExplanationGuardError ||
-      error instanceof PlanGenerationError
+      error instanceof OpenAiGenerationError
         ? error.requestedModel
         : null;
 

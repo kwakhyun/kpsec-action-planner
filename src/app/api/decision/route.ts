@@ -6,6 +6,7 @@ import {
   type DecisionFailureCode,
 } from "@/lib/decision-contracts";
 import { runLiveDecisionPipeline } from "@/lib/decision-pipeline";
+import { readPublicApiJson } from "@/server/public-api-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,14 +36,10 @@ function safeModelHeader(model: string | null): Record<string, string> {
 }
 
 export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    body = null;
-  }
+  const requestBody = await readPublicApiJson(request);
+  if (!requestBody.ok) return requestBody.response;
 
-  const requestResult = DecisionRequestSchema.safeParse(body);
+  const requestResult = DecisionRequestSchema.safeParse(requestBody.body);
   const envelope = await runLiveDecisionPipeline(
     requestResult.success ? requestResult.data.input : null,
   );

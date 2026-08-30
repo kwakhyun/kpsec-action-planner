@@ -4,13 +4,13 @@ import test from "node:test";
 import type { AgentDecisionExplanation } from "./decision-contracts";
 import { DECISION_INPUT_BASELINE } from "./test-fixtures/decision-fixtures";
 import { runLiveDecisionPipeline } from "./decision-pipeline";
-import { PlanGenerationError } from "./generate-plan";
 import {
   MARKET_DATA_DELAY_CAVEAT,
   MarketDataError,
   type MarketDataFailureCode,
   type MarketSnapshot,
 } from "./market-data";
+import { OpenAiGenerationError } from "./openai-generation-error";
 
 const FIRST_TIMESTAMP = Date.parse("2026-06-27T00:00:00.000Z") / 1_000;
 
@@ -143,7 +143,7 @@ test("AI failure preserves verified market and deterministic core without inheri
   const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
     fetchMarket: async () => MARKET,
     explain: async () => {
-      throw new PlanGenerationError("TIMEOUT", {
+      throw new OpenAiGenerationError("TIMEOUT", {
         requestedModel: "test-model",
       });
     },
@@ -177,7 +177,7 @@ for (const failureCode of [
     const result = await runLiveDecisionPipeline(DECISION_INPUT_BASELINE, {
       fetchMarket: async () => MARKET,
       explain: async () => {
-        throw new PlanGenerationError("UPSTREAM_ERROR", {
+        throw new OpenAiGenerationError("UPSTREAM_ERROR", {
           liveSmokeCategory: failureCode,
           requestedModel: "test-model",
         });

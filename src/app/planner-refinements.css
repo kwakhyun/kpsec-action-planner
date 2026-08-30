@@ -1,6 +1,4 @@
-/* Light-theme semantic text guard.
- * Earlier Phase 3 dark selectors are intentionally kept for history, so this
- * higher-specificity block owns every readable foreground in the live shell. */
+/* Refinement layer: final semantic foreground ownership for nested planner states. */
 .trade-demo .guided-agent__answer > span,
 .trade-demo .guided-agent__answer button {
   color: #5b6c7d;

@@ -103,12 +103,8 @@ main {
   white-space: nowrap;
 }
 
-/* Shared interactive primitives: buttons and chips.
-   .btn/.chip are added ALONGSIDE each component's existing classes, never in
-   place of them — component-scoped rules still resolve the final look until
-   each component's CSS is consolidated (see globals.css history). This keeps
-   one primary-action color system across the app instead of every component
-   styling its own buttons independently. */
+/* Shared interactive primitives. Component classes own layout while these
+   utilities own the product-wide action and chip states. */
 .btn {
   display: inline-flex;
   align-items: center;

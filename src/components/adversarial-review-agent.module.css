@@ -1,4 +1,5 @@
-.challenge-card {
+/* Scoped to AdversarialReviewSession. */
+.challengeCard {
   display: grid;
   gap: 16px;
   padding: 20px;
@@ -9,14 +10,14 @@
   box-shadow: var(--shadow);
 }
 
-.challenge-ai-identity {
+.challengeAiIdentity {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
 }
 
-.challenge-ai-badge {
+.challengeAiBadge {
   display: grid;
   width: 36px;
   height: 36px;
@@ -31,22 +32,22 @@
   box-shadow: 0 7px 18px rgba(178, 139, 0, 0.16);
 }
 
-.challenge-ai-identity > span:last-child {
+.challengeAiIdentity > span:last-child {
   display: grid;
   gap: 2px;
 }
 
-.challenge-ai-identity strong {
+.challengeAiIdentity strong {
   color: var(--text-primary);
   font-size: 0.86rem;
 }
 
-.challenge-ai-identity small {
+.challengeAiIdentity small {
   color: var(--text-faint);
   font-size: 0.7rem;
 }
 
-.challenge-thinking {
+.challengeThinking {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -59,7 +60,7 @@
   background: #fffbdf;
 }
 
-.challenge-thinking::after {
+.challengeThinking::after {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -70,13 +71,13 @@
   animation: challenge-scan 1.4s ease-in-out infinite;
 }
 
-.challenge-thinking > span {
+.challengeThinking > span {
   color: var(--gold-label-strong);
   font-size: 0.74rem;
   font-weight: 900;
 }
 
-.challenge-thinking p {
+.challengeThinking p {
   color: #5e5638;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -92,13 +93,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .challenge-thinking::after {
+  .challengeThinking::after {
     animation: none;
   }
 }
 
-.challenge-eyebrow,
-.challenge-section-label {
+.challengeEyebrow,
+.challengeSectionLabel {
   margin: 0 0 6px;
   color: var(--gold-label);
   font-size: 0.78rem;
@@ -106,24 +107,24 @@
   letter-spacing: 0.02em;
 }
 
-.challenge-card h3,
-.challenge-card p {
+.challengeCard h3,
+.challengeCard p {
   margin: 0;
 }
 
-.challenge-card h3 {
+.challengeCard h3 {
   font-size: 1.15rem;
   line-height: 1.35;
 }
 
-.challenge-intro {
+.challengeIntro {
   margin-top: 8px !important;
   color: var(--text-muted);
   font-size: 0.9rem;
   line-height: 1.55;
 }
 
-.challenge-cta {
+.challengeCta {
   min-height: 46px;
   border-radius: 14px;
   padding: 0 16px;
@@ -132,58 +133,58 @@
   cursor: pointer;
 }
 
-.challenge-cta:disabled,
-.challenge-answers button:disabled {
+.challengeCta:disabled,
+.challengeAnswers button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.challenge-result {
+.challengeResult {
   display: grid;
   gap: 16px;
   padding-top: 4px;
 }
 
-.challenge-list {
+.challengeList {
   display: grid;
   gap: 10px;
   margin: 0;
   padding-left: 22px;
 }
 
-.challenge-list li {
+.challengeList li {
   padding-left: 4px;
   line-height: 1.5;
 }
 
-.challenge-list small {
+.challengeList small {
   display: block;
   margin-top: 4px;
   color: var(--text-faint);
 }
 
-.challenge-assumption,
-.challenge-question {
+.challengeAssumption,
+.challengeQuestion {
   padding: 14px;
   border-radius: 14px;
   background: var(--surface-raised);
   line-height: 1.5;
 }
 
-.challenge-question > p:not(.challenge-section-label) {
+.challengeQuestion > p:not(.challengeSectionLabel) {
   margin-top: 6px;
   color: var(--text-muted);
   font-size: 0.88rem;
 }
 
-.challenge-answers {
+.challengeAnswers {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
 
-.challenge-answers button {
+.challengeAnswers button {
   min-height: 40px;
   border-radius: 999px;
   padding: 8px 13px;
@@ -193,7 +194,7 @@
   cursor: pointer;
 }
 
-.challenge-message {
+.challengeMessage {
   margin-top: 14px;
   padding: 12px 14px;
   border-radius: 12px;
@@ -203,7 +204,7 @@
   line-height: 1.5;
 }
 
-.challenge-message--error {
+.challengeMessageError {
   display: grid;
   gap: 3px;
   background: var(--danger-soft);
@@ -211,16 +212,16 @@
 }
 
 @media (max-width: 640px) {
-  .challenge-card {
+  .challengeCard {
     padding: 16px;
     border-radius: 16px;
   }
 
-  .challenge-answers {
+  .challengeAnswers {
     display: grid;
   }
 
-  .challenge-answers button {
+  .challengeAnswers button {
     width: 100%;
     border-radius: 12px;
   }

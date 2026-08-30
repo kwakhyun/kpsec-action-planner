@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/noto-sans-kr";
-import "./globals.css";
-import "./trading-shell.css";
-import "./guided-planning-flow.css";
-import "./plan-results.css";
-import "./light-theme.css";
-import "./planner-refinements.css";
-import "./production-ui.css";
+import "./app.css";
 
 export const metadata: Metadata = {
   title: "Action Planner | 매매 실행 의사결정 동반자",

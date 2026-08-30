@@ -10,10 +10,10 @@ import {
 } from "@/lib/decision-contracts";
 import type { ExecutionCoreSuccess } from "@/lib/execution-core";
 import {
-  normalizeRequestError,
-  PlanGenerationError,
+  normalizeOpenAiRequestError,
+  OpenAiGenerationError,
   requireGenerationConfiguration,
-} from "@/lib/generate-plan";
+} from "@/lib/openai-generation-error";
 import type { MarketSnapshot } from "@/lib/market-data";
 import {
   buildDecisionExplanationPrompt,
@@ -150,16 +150,16 @@ export function validateParsedDecisionResponse(
   decision: ExecutionCoreSuccess,
 ): AgentDecisionExplanation {
   if (response.status === "incomplete") {
-    throw new PlanGenerationError("INCOMPLETE");
+    throw new OpenAiGenerationError("INCOMPLETE");
   }
   if (response.status !== "completed") {
-    throw new PlanGenerationError("UPSTREAM_ERROR");
+    throw new OpenAiGenerationError("UPSTREAM_ERROR");
   }
   if (containsRefusal(response.output)) {
-    throw new PlanGenerationError("REFUSAL");
+    throw new OpenAiGenerationError("REFUSAL");
   }
   if (response.outputParsed === null || response.outputParsed === undefined) {
-    throw new PlanGenerationError("PARSE_ERROR");
+    throw new OpenAiGenerationError("PARSE_ERROR");
   }
 
   return validateDecisionExplanation(response.outputParsed, decision);
@@ -215,7 +215,7 @@ export async function generateDecisionExplanation(options: {
       { timeout: REQUEST_TIMEOUT_MS },
     );
   } catch (error: unknown) {
-    throw normalizeRequestError(error, model);
+    throw normalizeOpenAiRequestError(error, model);
   }
 
   try {
@@ -238,8 +238,8 @@ export async function generateDecisionExplanation(options: {
       });
       throw new DecisionExplanationGuardError(error.reason, response.model);
     }
-    const normalized = normalizeRequestError(error, response.model);
-    throw new PlanGenerationError(normalized.code, {
+    const normalized = normalizeOpenAiRequestError(error, response.model);
+    throw new OpenAiGenerationError(normalized.code, {
       liveSmokeCategory: normalized.liveSmokeCategory,
       requestedModel: response.model,
     });

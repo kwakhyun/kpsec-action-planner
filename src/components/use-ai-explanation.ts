@@ -61,6 +61,11 @@ export function useAiExplanation() {
           body: JSON.stringify({ mode: "LIVE", input }),
           signal: controller.signal,
         });
+        if (response.status === 429) {
+          throw new Error(
+            "잠시 요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요.",
+          );
+        }
         const payload: unknown = await response.json();
         const parsed = DecisionEnvelopeSchema.safeParse(payload);
         if (!parsed.success) {

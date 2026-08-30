@@ -474,3 +474,17 @@ test("5분 fallback은 표시 전용이고 분봉 부족 시 분 탭을 비활�
   await expect(secondPage.getByText(/1분 단위 공개 데이터|5분 단위 공개 데이터/)).toHaveCount(0);
   expectCleanHarness(failureHarness, { allowHandledHttpFailure: true });
 });
+
+test("존재하지 않는 경로는 복귀 동선이 있는 전용 404 화면을 표시한다", async ({
+  page,
+}) => {
+  await page.goto("/존재하지-않는-경로");
+
+  await expect(
+    page.getByRole("heading", { name: "요청한 화면을 찾지 못했어요" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "종목 화면으로 돌아가기" }),
+  ).toHaveAttribute("href", "/");
+  await expectNoHorizontalOverflow(page);
+});

@@ -104,6 +104,8 @@ flowchart LR
 - LIVE 실패를 예시 데이터 성공으로 자동 전환하지 않습니다.
 - 이전 입력 또는 이전 AI 결과를 현재 결과처럼 이어받지 않습니다.
 - 일반 테스트와 데모는 외부 OpenAI 호출 없이 실행됩니다.
+- 공개 AI 요청은 교차 출처 브라우저 호출을 거부하고 JSON 요청 스트림을 32KiB로 제한합니다.
+- 프로덕션 호출량은 Vercel Firewall에서 관찰한 뒤 단계적으로 제한합니다.
 
 ## 대표 시연 시나리오
 
@@ -124,7 +126,8 @@ flowchart LR
 - OpenAI Responses API: `store: false`, 서버 전용 호출
 - Recharts: OHLCV 캔들, 거래량, 가격 평균선과 계획 표시
 - Node.js 내장 테스트 러너, Playwright, ESLint
-- Vercel: 프로덕션 배포
+- GitHub Actions, Dependabot: 테스트와 의존성 품질 게이트
+- Vercel: Git 연동 프로덕션 배포와 Firewall 운영 보호
 
 ## 로컬 실행
 
@@ -152,6 +155,7 @@ npm run typecheck
 npm run lint
 npm run build
 npm run test:e2e
+npm audit --audit-level=high
 ```
 
 실제 OpenAI smoke는 일반 검증과 분리되어 있으며, 명시적으로 허용한 실행에서만 1회 호출하도록 구성했습니다.
@@ -162,11 +166,12 @@ npm run test:e2e
 
 | 항목 | 최근 확인 결과 |
 | --- | --- |
-| 단위 테스트 | 78개 통과 |
+| 단위 테스트 | 61개 통과 |
 | TypeScript | 통과 |
 | ESLint | 통과 |
 | 프로덕션 빌드 | 통과 |
-| Chromium E2E | 3개 시나리오 통과 |
+| Chromium E2E | 4개 시나리오 통과 |
+| npm 의존성 감사 | 취약점 0건 |
 | 공개 배포 주소 | `https://kpsec-action-planner.vercel.app` |
 | OpenAI LIVE smoke | 일반 검증에 포함하지 않으며 명시적으로 허용한 경우에만 별도 실행 |
 
@@ -188,7 +193,16 @@ npm run test:e2e
 - [`src/lib/trade-coach-core.ts`](./src/lib/trade-coach-core.ts): 보유 후·매도 재확인 계획
 - [`src/app/api/decision/route.ts`](./src/app/api/decision/route.ts): 검증된 실행안의 AI 설명 API 경계
 - [`src/app/api/adversarial-review/route.ts`](./src/app/api/adversarial-review/route.ts): AI 다른 관점 API 경계
+- [`src/server/public-api-request.ts`](./src/server/public-api-request.ts): 공개 AI API의 출처, 형식, 요청 크기 공통 검증
 - [`src/lib/demo-order-sidecar.ts`](./src/lib/demo-order-sidecar.ts): 실제 주문과 분리된 sidecar 계약
+- [`src/app/app.css`](./src/app/app.css): 전역 스타일 책임과 캐스케이드 계층의 단일 진입점
+- [`src/app/error.tsx`](./src/app/error.tsx), [`src/app/not-found.tsx`](./src/app/not-found.tsx): 오류 복구와 404 복귀 화면
+
+## 배포 품질 게이트
+
+[`quality-gate.yml`](./.github/workflows/quality-gate.yml)은 pull request와 `main` 푸시에서 의존성 감사, 단위 테스트, 타입 검사, 린트, 프로덕션 빌드, Chromium E2E를 실행합니다. [`dependabot.yml`](./.github/dependabot.yml)은 npm 업데이트를 매주 확인합니다.
+
+Vercel Git 연동은 계속 자동 배포를 담당합니다. 프로덕션 도메인 승격까지 품질 결과에 연결하려면 Vercel Deployment Checks에서 `Unit, static, build, and browser checks`를 필수 체크로 선택해야 합니다. 공개 API와 운영 보호의 경계는 [`SECURITY.md`](./SECURITY.md)에 정리했습니다.
 
 ## 한계와 다음 검증
 
@@ -196,7 +210,7 @@ npm run test:e2e
 - Yahoo Finance는 거래소·제공 과정에 따라 지연되거나 누락될 수 있으며 실시간 호가가 아닙니다.
 - 호가창이 없으므로 최적 지정가, 예상 슬리피지, 체결 가능성을 계산하지 않습니다.
 - 수수료, 세금, 기업행동, 잔고와 주문 가능 금액은 반영하지 않습니다.
-- 로그인, DB, 계좌 연결, 실제 주문, 백그라운드 감시와 알림 발송은 구현하지 않았습니다.
+- 로그인, DB, 계좌 연결, 실제 주문, 백그라운드 감시와 알림 발송은 구현하지 않았습니다. 공개 AI API는 애플리케이션 요청 검증과 Vercel Firewall을 사용하지만 사용자별 영구 쿼터는 제공하지 않습니다.
 - 실제 서비스 적용 전에는 데이터 제공 계약, 금융 규제·준법 검토, 접근성 테스트, 사용자 인터뷰와 장기 관찰이 필요합니다.
 
 ## 이 프로젝트가 보여주는 역량

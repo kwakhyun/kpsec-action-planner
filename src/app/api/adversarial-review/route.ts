@@ -11,6 +11,7 @@ import {
   AdversarialReviewGenerationError,
   generateAdversarialReview,
 } from "@/lib/generate-adversarial-review";
+import { readPublicApiJson } from "@/server/public-api-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,14 +96,10 @@ function safeModelHeader(model: string | null): Record<string, string> {
 }
 
 export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    body = null;
-  }
+  const requestBody = await readPublicApiJson(request);
+  if (!requestBody.ok) return requestBody.response;
 
-  const parsed = AdversarialReviewRequestSchema.safeParse(body);
+  const parsed = AdversarialReviewRequestSchema.safeParse(requestBody.body);
   if (!parsed.success) {
     const envelope = pausedEnvelope({ request: null, code: "INVALID_INPUT" });
     return NextResponse.json(envelope, {

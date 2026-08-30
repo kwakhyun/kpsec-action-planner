@@ -1,4 +1,4 @@
-/* Phase 3.2 final light companion overrides. Keep these after Phase 3.1. */
+/* Theme layer: semantic light palette for the trading workspace. */
 
 .trade-topbar {
   border-color: #e0e3e7;
@@ -512,7 +512,7 @@
   }
 }
 
-/* Light mode contrast guard: override the more-specific Phase 3.1 dark selectors. */
+/* Nested interactive states require explicit semantic foreground ownership. */
 .execution-options__header > div > span {
   color: #765d00;
 }
