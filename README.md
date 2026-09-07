@@ -126,7 +126,7 @@ flowchart LR
 - OpenAI Responses API: `store: false`, 서버 전용 호출
 - Recharts: OHLCV 캔들, 거래량, 가격 평균선과 계획 표시
 - Node.js 내장 테스트 러너, Playwright, ESLint
-- GitHub Actions, Dependabot: 테스트와 의존성 품질 게이트
+- GitHub Actions: 테스트와 의존성 품질 게이트
 - Vercel: Git 연동 프로덕션 배포와 Firewall 운영 보호
 
 ## 로컬 실행
@@ -200,7 +200,7 @@ npm audit --audit-level=high
 
 ## 배포 품질 게이트
 
-[`quality-gate.yml`](./.github/workflows/quality-gate.yml)은 pull request와 `main` 푸시에서 의존성 감사, 단위 테스트, 타입 검사, 린트, 프로덕션 빌드, Chromium E2E를 실행합니다. [`dependabot.yml`](./.github/dependabot.yml)은 npm 업데이트를 매주 확인합니다.
+[`quality-gate.yml`](./.github/workflows/quality-gate.yml)은 pull request와 `main` 푸시에서 의존성 감사, 단위 테스트, 타입 검사, 린트, 프로덕션 빌드, Chromium E2E를 실행합니다.
 
 Vercel Git 연동은 계속 자동 배포를 담당합니다. 프로덕션 도메인 승격까지 품질 결과에 연결하려면 Vercel Deployment Checks에서 `Unit, static, build, and browser checks`를 필수 체크로 선택해야 합니다. 공개 API와 운영 보호의 경계는 [`SECURITY.md`](./SECURITY.md)에 정리했습니다.
 
